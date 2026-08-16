@@ -26,6 +26,21 @@ body.full-screen .savebar {
   display: none;
 }
 
+/*
+ * With every band removed, the stage is the only grid item left - and grid
+ * auto-placement would drop it into the first track, which is `auto`. An
+ * auto-height row gives the iframe its 150px default instead of the viewport.
+ * Collapsing the template to a single 1fr row is what actually makes full
+ * screen full.
+ */
+body.full-screen .reader {
+  grid-template-rows: 1fr;
+}
+
+body.full-screen {
+  overflow: hidden;
+}
+
 body.full-screen .stage {
   padding: 0;
 }
