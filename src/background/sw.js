@@ -62,6 +62,24 @@ function waitForTabReady(tabId, timeoutMs = 20000) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  /*
+   * PEEK is deliberately not allowed to open a tab. It runs on every library
+   * load to show which copies have fallen behind; opening background tabs for
+   * that would be a surprising amount of activity for a passive check.
+   */
+  if (message?.type === MSG.PEEK) {
+    chrome.tabs
+      .query({ url: 'https://claude.ai/*' })
+      .then((tabs) => {
+        const tab = tabs.find((t) => t.url?.includes(message.convId))
+        if (!tab) return { ok: false, error: 'no open tab for this conversation' }
+        return chrome.tabs.sendMessage(tab.id, { type: MSG.LIST_STATUS })
+      })
+      .then(sendResponse)
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
   // Messages an extension page sends that need a claude.ai tab to service them.
   if (message?.type === MSG.SYNC_CHECK || message?.type === MSG.CAPTURE_FILE) {
     withConversationTab(message.convId, (tabId) => chrome.tabs.sendMessage(tabId, message))

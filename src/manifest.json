@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Claude File Vault",
-  "version": "0.1.0",
-  "description": "Capture, render, edit and update the files Claude generates in a conversation.",
+  "name": "Trove",
+  "version": "0.2.0",
+  "description": "Files Claude wrote, kept. Capture, read, edit and re-pull the files from a conversation.",
 
   "permissions": ["storage", "unlimitedStorage", "tabs"],
   "host_permissions": ["https://claude.ai/*"],
@@ -29,7 +29,7 @@
 
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Claude File Vault"
+    "default_title": "Trove"
   },
 
   "options_ui": {

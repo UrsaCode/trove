@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trove</title>
+    <link rel="stylesheet" href="../styles/tokens.css" />
+    <link rel="stylesheet" href="../styles/reader.css" />
+  </head>
+  <body>
+    <div class="reader">
+      <!-- Band above. Nothing here ever touches the document. -->
+      <header class="band band-top">
+        <button class="back btn-ghost" id="back" title="Back to library" aria-label="Back to library">
+          &#8249;
+        </button>
+
+        <div class="ident">
+          <div class="name mono" id="name">
+            <span id="name-text"></span>
+            <span class="dirty-dot hidden" id="dirty-dot" title="Unsaved changes"></span>
+          </div>
+          <div class="tether" id="tether">
+            <span class="node"></span><span class="wire"></span><span class="lbl"></span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="seg" id="mode" role="tablist">
+            <button id="mode-render" role="tab" aria-selected="true">Render</button>
+            <button id="mode-source" role="tab" aria-selected="false">Source</button>
+          </div>
+          <button class="btn" id="wrap">Wrap lines</button>
+          <button class="btn" id="export">Save a copy</button>
+          <button class="btn" id="repull">Re-pull</button>
+          <button class="btn btn-sever" id="delete" title="Delete this file">Delete</button>
+        </div>
+      </header>
+
+      <!-- The stage. PAPER IS SACRED: no overlay is ever drawn on top. -->
+      <main class="stage" id="stage">
+        <iframe
+          id="paper"
+          class="paper"
+          title="Rendered file"
+          src="sandbox.html"
+          sandbox="allow-scripts allow-forms allow-modals allow-popups"
+        ></iframe>
+        <div id="source" class="source hidden"></div>
+      </main>
+
+      <!-- Save bar, only while the text has diverged. -->
+      <div class="savebar hidden" id="savebar">
+        <div class="savebar-state">
+          <span class="dot"></span>
+          <span>Edited locally &middot; not saved</span>
+          <span class="mono delta" id="save-delta"></span>
+        </div>
+        <div class="savebar-actions">
+          <button class="btn" id="discard">Discard changes</button>
+          <button class="btn btn-tether" id="save">Save to Trove</button>
+        </div>
+      </div>
+
+      <!-- Band below: the file's whole lineage in one line of mono. -->
+      <footer class="band band-bottom">
+        <div class="lineage mono" id="lineage"></div>
+        <a class="open-conv mono" id="open-conv" target="_blank" rel="noreferrer">
+          Open conversation &#8599;
+        </a>
+      </footer>
+    </div>
+
+    <script src="reader.js"></script>
+  </body>
+</html>

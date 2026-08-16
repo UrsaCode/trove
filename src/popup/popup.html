@@ -2,27 +2,43 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Claude File Vault</title>
+    <title>Trove</title>
     <link rel="stylesheet" href="../styles/tokens.css" />
     <link rel="stylesheet" href="../styles/popup.css" />
   </head>
   <body>
     <header class="head">
-      <div class="wordmark">Claude File <span>Vault</span></div>
-      <div class="title" id="conv-title">Checking this page…</div>
-      <div class="summary" id="summary"></div>
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <span class="wordmark">Trove</span>
+      </div>
+      <span class="pill hidden" id="status"><span class="dot"></span><span id="status-text"></span></span>
     </header>
+
+    <section class="conv hidden" id="conv">
+      <div class="conv-title" id="conv-title"></div>
+      <div class="conv-line">
+        <div class="tether" id="tether">
+          <span class="node"></span><span class="wire"></span><span class="lbl"></span>
+        </div>
+        <button class="repull-chip hidden" id="repull-chip">Re-pull</button>
+      </div>
+    </section>
 
     <div class="list" id="list"></div>
 
     <footer class="foot">
-      <button class="btn btn-primary" id="capture">Capture all</button>
+      <span class="mono kept" id="kept"></span>
+      <button class="btn" id="open-library">Open library</button>
+      <button class="btn btn-tether hidden" id="capture">Capture</button>
+    </footer>
+
+    <div class="settings">
       <label class="toggle">
         <input type="checkbox" id="auto" />
-        <span>Capture automatically</span>
+        <span>Catch files as Claude writes them</span>
       </label>
-      <button class="link" id="open-library">Open library</button>
-    </footer>
+    </div>
 
     <script src="popup.js"></script>
   </body>

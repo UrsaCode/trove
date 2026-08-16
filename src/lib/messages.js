@@ -17,6 +17,8 @@ export const MSG = Object.freeze({
   // Extension page -> service worker
   SYNC_CHECK: 'sync-check',
   GET_STATUS: 'get-status',
+  // Non-intrusive: answers only from a tab the user already has open.
+  PEEK: 'peek',
 })
 
 /** Namespaced marker for window.postMessage traffic from the main world. */

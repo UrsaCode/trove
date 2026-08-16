@@ -1,57 +1,111 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/*
+ * Popup - 360 wide. It answers one question, "what did this conversation just
+ * give me?", and gets out of the way.
+ */
 
 body {
-  width: 340px;
-  max-height: 560px;
-  margin: 0;
+  width: 360px;
+  max-height: 580px;
   display: flex;
   flex-direction: column;
-  background: var(--ink);
-  color: var(--bone);
-  font: 400 var(--text-sm) / 1.5 var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
-
-:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-  border-radius: 3px;
 }
 
 .head {
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--ink-line);
-  background: var(--ink-raised);
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex: 1;
+}
+
+/* The mark: an open tray catching a file. */
+.mark {
+  width: 16px;
+  height: 16px;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.mark::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 16px;
+  height: 10px;
+  border: 2px solid var(--bone);
+  border-top: 0;
+  border-radius: 0 0 5px 5px;
+}
+
+.mark::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 1.5px;
+  background: var(--tether);
 }
 
 .wordmark {
-  font: 600 var(--text-xs) / 1 var(--font-mono);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--bone-dim);
+  font: 700 var(--t-13) / 1 var(--ui);
 }
 
-.wordmark span {
-  color: var(--clay);
+/* ── Conversation ──────────────────────────────────────────────────────── */
+
+.conv {
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--panel);
 }
 
-.title {
-  margin-top: var(--space-3);
-  font: 500 var(--text-md) / 1.35 var(--font-mono);
+.conv-title {
+  font-size: var(--t-13);
   color: var(--bone);
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.summary {
-  margin-top: var(--space-1);
-  font: 400 var(--text-xs) / 1.4 var(--font-mono);
-  color: var(--bone-dim);
-  letter-spacing: 0.02em;
+.conv-line {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: 6px;
 }
+
+.conv-line .tether {
+  flex: 1;
+}
+
+.repull-chip {
+  all: unset;
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--moved);
+  color: var(--moved);
+  font: 400 var(--t-10) / 1.2 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.repull-chip:hover {
+  background: rgba(229, 169, 60, 0.14);
+}
+
+/* ── File list ─────────────────────────────────────────────────────────── */
 
 .list {
   flex: 1;
@@ -61,128 +115,152 @@ body {
 
 .item {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--ink-line);
-  border-left: var(--edge) solid transparent;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--rule);
+  border-left: 2px solid transparent;
 }
 
-.item[data-state='new'] {
-  border-left-color: var(--state-new);
+/* Anything caught in the last few minutes wears a fresh mark. */
+.item[data-fresh='true'] {
+  border-left-color: var(--tether);
 }
-.item[data-state='changed'] {
-  border-left-color: var(--state-changed);
+
+.tile {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 24px;
+  border-radius: 3px;
+  background: var(--raise2);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
 }
-.item[data-state='unchanged'] {
-  border-left-color: var(--state-current);
+
+.tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-.item[data-state='conflict'] {
-  border-left-color: var(--state-edited);
+
+.tile .glyph {
+  width: 12px;
+  height: 9px;
+  border-top: 1.5px solid var(--dimmer);
+  border-bottom: 1.5px solid var(--dimmer);
+}
+
+.item-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .item-name {
-  flex: 1;
-  min-width: 0;
-  font: 400 var(--text-xs) / 1.5 var(--font-mono);
-  overflow-wrap: anywhere;
-}
-
-.item-tag {
-  font: 500 10.5px/1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font: 400 var(--t-12) / 1.35 var(--mono);
+  color: var(--bone);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.item[data-state='new'] .item-tag {
-  color: var(--state-new);
-}
-.item[data-state='changed'] .item-tag {
-  color: var(--state-changed);
-}
-.item[data-state='unchanged'] .item-tag {
-  color: var(--state-current);
-}
-.item[data-state='conflict'] .item-tag {
-  color: var(--state-edited);
+.item-sub {
+  margin-top: 1px;
+  font: 400 var(--t-10) / 1.35 var(--mono);
+  color: var(--dimmer);
 }
 
+.item-sub[data-state='moved'] {
+  color: var(--moved);
+}
+
+.ext {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: var(--raise);
+  color: var(--dim);
+  font: 400 var(--t-10) / 1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Empty ─────────────────────────────────────────────────────────────── */
+
 .message {
-  padding: var(--space-5) var(--space-4);
-  color: var(--bone-dim);
-  font-size: var(--text-sm);
+  display: grid;
+  place-items: center;
+  gap: var(--s2);
+  padding: var(--s6) var(--s4);
   text-align: center;
+}
+
+.message .mark {
+  width: 30px;
+  height: 30px;
+  opacity: 0.5;
+  margin-bottom: var(--s1);
+}
+
+.message .mark::before {
+  width: 30px;
+  height: 19px;
+  border-radius: 0 0 10px 10px;
+}
+
+.message .mark::after {
+  left: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
 }
 
 .message strong {
-  display: block;
-  margin-bottom: var(--space-2);
+  font: 600 var(--t-13) / 1.4 var(--ui);
   color: var(--bone);
-  font: 500 var(--text-md) / 1.35 var(--font-mono);
 }
+
+.message span {
+  color: var(--dim);
+  font-size: var(--t-12);
+  line-height: 1.55;
+  max-width: 30ch;
+}
+
+/* ── Foot ──────────────────────────────────────────────────────────────── */
 
 .foot {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-top: 1px solid var(--ink-line);
-  background: var(--ink-raised);
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--rule);
+  background: var(--panel);
 }
 
-.btn {
-  all: unset;
-  cursor: pointer;
-  text-align: center;
-  padding: 9px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--ink-line);
-  font: 500 var(--text-xs) / 1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--bone-dim);
-  transition: background var(--motion), color var(--motion);
+.kept {
+  flex: 1;
+  color: var(--dimmer);
+  font-size: var(--t-10);
 }
 
-.btn-primary {
-  background: var(--clay);
-  border-color: transparent;
-  color: var(--clay-ink);
-}
-
-.btn-primary:hover {
-  background: var(--clay-hover);
-}
-
-.btn[disabled] {
-  opacity: 0.45;
-  cursor: default;
+.settings {
+  padding: var(--s2) var(--s4) var(--s3);
+  background: var(--panel);
+  border-top: 1px solid var(--rule);
 }
 
 .toggle {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--bone-dim);
+  gap: var(--s2);
+  color: var(--dim);
+  font-size: var(--t-11);
   cursor: pointer;
 }
 
 .toggle input {
-  accent-color: var(--clay);
+  accent-color: var(--tether);
   cursor: pointer;
-}
-
-.link {
-  all: unset;
-  cursor: pointer;
-  font: 400 var(--text-xs) / 1 var(--font-mono);
-  color: var(--bone-faint);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  justify-self: start;
-}
-
-.link:hover {
-  color: var(--bone);
 }

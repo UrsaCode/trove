@@ -89,6 +89,29 @@ function normaliseMime(contentType) {
   return mime
 }
 
+/**
+ * Coarse buckets for the library's filter chips.
+ *
+ * These are reader-facing categories, not technical ones: someone looking for
+ * "the page Claude made" thinks pages, not text/html. SVG lands in images
+ * because that is what a person sees, even though it is editable as text.
+ */
+const CATEGORIES = {
+  pages: ['html', 'htm'],
+  images: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico'],
+  code: ['js', 'mjs', 'jsx', 'ts', 'tsx', 'css', 'py', 'sh', 'rb', 'go', 'rs', 'java', 'php'],
+  data: ['json', 'csv', 'yaml', 'yml', 'xml', 'md', 'txt', 'sql'],
+}
+
+/** @returns {'pages'|'images'|'code'|'data'|'other'} */
+export function fileCategory(ext) {
+  const key = String(ext ?? '').toLowerCase()
+  for (const [category, extensions] of Object.entries(CATEGORIES)) {
+    if (extensions.includes(key)) return category
+  }
+  return 'other'
+}
+
 /** True only for files Claude generated into the outputs directory. */
 export function isOutput(absolutePath) {
   return typeof absolutePath === 'string' && absolutePath.startsWith(`${OUTPUTS_DIR}/`)

@@ -8,7 +8,16 @@
       body {
         margin: 0;
         height: 100%;
-        background: #fff;
+        background: #f7f5f0;
+      }
+      /*
+       * #root must carry the full height. Without it, the nested iframe's
+       * `height: 100%` resolves against an auto-height parent and falls back
+       * to the iframe default of 150px - which is exactly the symptom of a
+       * preview that renders correctly but only occupies a thin band.
+       */
+      #root {
+        height: 100%;
       }
       #frame {
         width: 100%;
@@ -38,14 +47,14 @@
         padding: 24px;
         box-sizing: border-box;
         text-align: center;
-        color: #6b6459;
+        color: #7c8492;
         font: 400 13px/1.6 ui-monospace, Menlo, Consolas, monospace;
-        background: #f3efe6;
+        background: #f7f5f0;
       }
       .stage {
         display: flex;
         height: 100%;
-        background: #f3efe6;
+        background: #f7f5f0;
       }
     </style>
   </head>

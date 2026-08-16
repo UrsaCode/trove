@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parsePath, isOutput, OUTPUTS_DIR } from '../src/lib/paths.js'
+import { parsePath, isOutput, fileCategory, OUTPUTS_DIR } from '../src/lib/paths.js'
 
 const out = (n) => `${OUTPUTS_DIR}/${n}`
 
@@ -46,6 +46,43 @@ describe('parsePath', () => {
   it('is case-insensitive about the extension', () => {
     expect(parsePath(out('Page.HTML')).mime).toBe('text/html')
     expect(parsePath(out('Page.HTML')).ext).toBe('html')
+  })
+})
+
+describe('fileCategory', () => {
+  it('buckets HTML as a page', () => {
+    expect(fileCategory('html')).toBe('pages')
+  })
+
+  it('buckets SVG as an image, because that is what a person sees', () => {
+    expect(fileCategory('svg')).toBe('images')
+  })
+
+  it('buckets raster images', () => {
+    expect(fileCategory('png')).toBe('images')
+    expect(fileCategory('jpeg')).toBe('images')
+  })
+
+  it('buckets scripts and stylesheets as code', () => {
+    expect(fileCategory('js')).toBe('code')
+    expect(fileCategory('css')).toBe('code')
+    expect(fileCategory('py')).toBe('code')
+  })
+
+  it('buckets structured text as data', () => {
+    expect(fileCategory('json')).toBe('data')
+    expect(fileCategory('csv')).toBe('data')
+    expect(fileCategory('md')).toBe('data')
+  })
+
+  it('is case-insensitive', () => {
+    expect(fileCategory('PNG')).toBe('images')
+  })
+
+  it('falls back to other for anything unrecognised', () => {
+    expect(fileCategory('xyz')).toBe('other')
+    expect(fileCategory('')).toBe('other')
+    expect(fileCategory(null)).toBe('other')
   })
 })
 

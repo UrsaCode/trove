@@ -1,387 +1,394 @@
 /**
- * Options page controller: the library.
+ * Library - the options page.
  *
- * Reads IndexedDB directly (same extension origin as the service worker) and
- * routes anything needing claude.ai through the worker, which finds or opens a
- * tab whose content script is same-origin with Claude.
+ * Two panes: conversations on the rail, files in a table. Selecting a file
+ * opens the Reader in its own tab, because a captured document deserves the
+ * whole window rather than a third of one.
  */
 
 import {
   listConversations,
   listFiles,
-  getFile,
-  putFile,
-  deleteFile,
-  deleteConversation,
   getConversation,
   putConversation,
+  deleteConversation,
   contentSize,
 } from '../lib/db.js'
-import { hashContent } from '../lib/hash.js'
+import { fileCategory } from '../lib/paths.js'
 import { MSG } from '../lib/messages.js'
-import { STATES } from '../lib/diff.js'
-import { renderInSandbox } from './preview.js'
-import { createEditor } from './editor.js'
-import { exportFile, exportConversation } from './export.js'
+import { confirmDeleteConversation } from '../ui/dialog.js'
+import { exportConversation } from './export.js'
 
 const el = (id) => document.getElementById(id)
-const panes = {
-  conversations: el('conversations'),
-  files: el('files'),
-  totals: el('totals'),
-  filesEyebrow: el('files-eyebrow'),
-  conflict: el('conflict'),
+const state = { convId: null, filter: 'all', query: '' }
+
+/** Object URLs for row thumbnails, revoked whenever the table is rebuilt. */
+let thumbUrls = []
+
+/**
+ * Last known live listing per conversation, keyed path -> entry. Populated by
+ * a passive peek at open claude.ai tabs; empty means "we have no idea", which
+ * is rendered as tethered rather than as a false divergence claim.
+ */
+const liveByConv = new Map()
+
+/** Has the source moved on from what we hold? */
+function hasMoved(file) {
+  const live = liveByConv.get(file.convId)?.get(file.path)
+  if (!live) return false
+  return live.size !== file.remoteSize || live.created_at !== file.remoteCreatedAt
 }
 
-const state = { convId: null, fileId: null, tab: 'preview', dirty: false }
-
-let editor = null
+function isGone(file) {
+  const live = liveByConv.get(file.convId)
+  return Boolean(live) && !live.has(file.path)
+}
 
 // ── Formatting ────────────────────────────────────────────────────────────
 
-const bytes = (n) => {
+function bytes(n) {
+  if (!n) return '0 B'
   if (n < 1024) return `${n} B`
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
 
-const when = (ms) => {
+function ago(ms) {
   if (!ms) return ''
-  const days = Math.floor((Date.now() - ms) / 86400000)
-  if (days === 0) return 'today'
+  const seconds = Math.max(0, (Date.now() - ms) / 1000)
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  const days = Math.floor(seconds / 86400)
   if (days === 1) return 'yesterday'
-  if (days < 30) return `${days}d ago`
-  return new Date(ms).toLocaleDateString()
+  if (days < 7) return `${days}d ago`
+  if (days < 28) return `${Math.floor(days / 7)}w ago`
+  return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }
 
-const STATE_LABEL = {
-  [STATES.NEW]: 'new',
-  [STATES.UNCHANGED]: 'current',
-  [STATES.CHANGED]: 'changed',
-  [STATES.CONFLICT]: 'edited',
-  [STATES.ORPHANED]: 'gone',
+// ── The tether ────────────────────────────────────────────────────────────
+
+/**
+ * The Source column. This is the only place colour appears in the list, so
+ * the state a row is in has to be readable from this element alone.
+ */
+function tetherFor(file) {
+  const wrap = document.createElement('div')
+  wrap.className = 'tether'
+
+  const node = document.createElement('span')
+  node.className = 'node'
+  const wire = document.createElement('span')
+  wire.className = 'wire'
+  const label = document.createElement('span')
+  label.className = 'lbl'
+
+  if (isGone(file)) {
+    wrap.dataset.state = 'gone'
+    label.textContent = 'no longer there'
+  } else if (hasMoved(file)) {
+    wrap.dataset.state = 'moved'
+    label.textContent = file.messageIndex ? `newer in msg ${file.messageIndex}` : 'newer version'
+  } else if (file.edited) {
+    label.textContent = 'edited locally'
+  } else {
+    label.textContent = 'tethered'
+  }
+
+  wrap.append(node, wire, label)
+  return wrap
 }
 
-/** A file's state from what we hold alone - no network. */
-function localState(file) {
-  if (file.orphaned) return STATES.ORPHANED
-  if (file.edited) return STATES.CONFLICT
-  return STATES.UNCHANGED
+function tile(file) {
+  const box = document.createElement('div')
+  box.className = 'tile'
+
+  if (file.kind === 'binary' && file.mime?.startsWith('image/')) {
+    const url = URL.createObjectURL(file.content)
+    thumbUrls.push(url)
+    const img = document.createElement('img')
+    img.src = url
+    img.alt = ''
+    box.appendChild(img)
+  } else {
+    const glyph = document.createElement('span')
+    glyph.className = 'glyph'
+    box.appendChild(glyph)
+  }
+  return box
 }
 
-// ── Rendering ─────────────────────────────────────────────────────────────
+// ── Rail ──────────────────────────────────────────────────────────────────
 
-function row({ selected, stateName, name, meta }) {
-  const button = document.createElement('button')
-  button.className = 'row'
-  button.type = 'button'
-  button.setAttribute('role', 'option')
-  button.setAttribute('aria-selected', String(Boolean(selected)))
-  if (stateName) button.dataset.state = stateName
-
-  const title = document.createElement('div')
-  title.className = 'row-name'
-  title.textContent = name
-
-  const sub = document.createElement('div')
-  sub.className = 'row-meta'
-  sub.append(...meta)
-
-  button.append(title, sub)
-  return button
-}
-
-function tag(stateName) {
-  const span = document.createElement('span')
-  span.className = 'tag'
-  span.dataset.state = stateName
-  span.textContent = STATE_LABEL[stateName] ?? stateName
-  return span
-}
-
-function text(value) {
-  return document.createTextNode(value)
-}
-
-async function renderConversations() {
+async function renderRail() {
   const conversations = await listConversations()
-  panes.conversations.textContent = ''
-
   const totalFiles = conversations.reduce((n, c) => n + (c.fileCount ?? 0), 0)
   const totalBytes = conversations.reduce((n, c) => n + (c.bytes ?? 0), 0)
-  panes.totals.textContent = conversations.length
-    ? `${conversations.length} conversations · ${totalFiles} files · ${bytes(totalBytes)}`
-    : ''
 
-  if (!conversations.length) {
-    renderFirstRun()
-    return
-  }
+  el('all-sub').textContent = `${totalFiles} files · ${conversations.length} conversations`
+  el('kept').textContent = `${bytes(totalBytes)} kept locally`
+  // Chrome grants unlimited storage; the meter is a sense of scale, not a cap.
+  el('meter-fill').style.width = `${Math.min(100, (totalBytes / (50 * 1024 * 1024)) * 100)}%`
+
+  el('all-files').setAttribute('aria-selected', String(state.convId === null))
+
+  const list = el('conversations')
+  list.textContent = ''
 
   for (const conversation of conversations) {
-    const item = row({
-      selected: conversation.id === state.convId,
-      name: conversation.title,
-      meta: [
-        text(`${conversation.fileCount ?? 0} files · ${bytes(conversation.bytes ?? 0)} · `),
-        text(when(conversation.updatedAt)),
-      ],
+    const item = document.createElement('button')
+    item.className = 'rail-item'
+    item.setAttribute('aria-selected', String(conversation.id === state.convId))
+
+    const title = document.createElement('div')
+    title.className = 'rail-title'
+    if (conversation.hasMoved) {
+      const dot = document.createElement('span')
+      dot.className = 'moved-dot'
+      title.appendChild(dot)
+    }
+    title.appendChild(document.createTextNode(conversation.title))
+
+    const sub = document.createElement('div')
+    sub.className = 'rail-sub mono'
+    sub.textContent = `${conversation.fileCount ?? 0} files · ${ago(conversation.updatedAt)}`
+
+    const text = document.createElement('div')
+    text.style.minWidth = '0'
+    text.append(title, sub)
+
+    // Discoverable on hover or keyboard focus, rather than hidden behind a
+    // right-click nobody would think to try.
+    const save = document.createElement('span')
+    save.className = 'rail-remove rail-save'
+    save.setAttribute('role', 'button')
+    save.setAttribute('tabindex', '0')
+    save.title = `Save all ${conversation.fileCount ?? 0} files as a zip`
+    save.textContent = '⤓'
+    const onSave = async (event) => {
+      event.stopPropagation()
+      const files = await listFiles(conversation.id)
+      if (files.length) await exportConversation(conversation, files)
+    }
+    save.addEventListener('click', onSave)
+    save.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') onSave(event)
     })
-    item.addEventListener('click', () => selectConversation(conversation.id))
-    panes.conversations.appendChild(item)
+
+    const remove = document.createElement('span')
+    remove.className = 'rail-remove'
+    remove.setAttribute('role', 'button')
+    remove.setAttribute('tabindex', '0')
+    remove.title = `Delete ${conversation.title}`
+    remove.textContent = '×'
+    const onRemove = (event) => {
+      event.stopPropagation()
+      removeConversation(conversation.id)
+    }
+    remove.addEventListener('click', onRemove)
+    remove.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') onRemove(event)
+    })
+
+    item.append(text, save, remove)
+    item.addEventListener('click', () => {
+      state.convId = conversation.id
+      render()
+    })
+    list.appendChild(item)
   }
-
-  if (!state.convId) await selectConversation(conversations[0].id)
 }
 
-function renderFirstRun() {
-  panes.files.textContent = ''
-  const empty = document.createElement('div')
-  empty.className = 'empty'
-  empty.innerHTML = `
-    <h2>Nothing captured yet</h2>
-    <p>Files Claude generates in a conversation live only inside that conversation. Capture them here and they are yours.</p>
-    <ol>
-      <li>Open a conversation on <code>claude.ai</code> and click <strong>Save</strong> on any file card.</li>
-      <li>Or click the extension icon in the toolbar and choose <strong>Capture all</strong>.</li>
-    </ol>
-  `
-  panes.conversations.appendChild(empty)
+// ── Table ─────────────────────────────────────────────────────────────────
+
+async function collectFiles() {
+  const conversations = await listConversations()
+  const byId = new Map(conversations.map((c) => [c.id, c]))
+  const chosen = state.convId ? conversations.filter((c) => c.id === state.convId) : conversations
+
+  const rows = []
+  for (const conversation of chosen) {
+    for (const file of await listFiles(conversation.id)) {
+      rows.push({ ...file, conversation: byId.get(file.convId) })
+    }
+  }
+  return rows.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
 }
 
-async function renderFiles() {
-  panes.files.textContent = ''
-  if (!state.convId) return
+function matches(file) {
+  if (state.filter !== 'all' && fileCategory(file.ext) !== state.filter) return false
+  if (!state.query) return true
+  const haystack = `${file.name} ${file.ext} ${file.conversation?.title ?? ''}`.toLowerCase()
+  return haystack.includes(state.query)
+}
 
-  const [conversation, files] = await Promise.all([
-    getConversation(state.convId),
-    listFiles(state.convId),
-  ])
-  panes.filesEyebrow.textContent = conversation ? `${files.length} files` : 'Files'
+async function renderTable() {
+  for (const url of thumbUrls) URL.revokeObjectURL(url)
+  thumbUrls = []
 
-  if (!files.length) {
-    const note = document.createElement('p')
-    note.className = 'note'
-    note.textContent = 'This conversation has no captured files.'
-    panes.files.appendChild(note)
+  const rows = (await collectFiles()).filter(matches)
+  const body = el('rows')
+  body.textContent = ''
+
+  if (!rows.length) {
+    body.appendChild(emptyState())
     return
   }
 
-  for (const file of files) {
-    const stateName = localState(file)
-    const meta = [text(`${bytes(contentSize(file.content))} · `), tag(stateName)]
+  for (const file of rows) {
+    const row = document.createElement('button')
+    row.className = 'trow'
 
-    // The signature: when the remote moved, show the byte delta - the actual
-    // number the diff compares.
-    if (file.remoteSize && contentSize(file.content) !== file.remoteSize) {
-      const delta = document.createElement('span')
-      delta.className = 'delta'
-      delta.textContent = `${file.remoteSize.toLocaleString()} B`
-      meta.push(delta)
+    const fileCell = document.createElement('div')
+    fileCell.className = 'col-file'
+    const text = document.createElement('div')
+    text.style.minWidth = '0'
+    const name = document.createElement('div')
+    name.className = 'file-name'
+    name.textContent = file.name
+    const conv = document.createElement('div')
+    conv.className = 'file-conv'
+    conv.textContent = file.conversation?.title ?? ''
+    text.append(name, conv)
+    fileCell.append(tile(file), text)
+
+    const size = document.createElement('div')
+    size.className = 'col-size'
+    size.textContent = bytes(contentSize(file.content))
+
+    const when = document.createElement('div')
+    when.className = 'col-when'
+    when.textContent = ago(file.capturedAt)
+
+    const source = document.createElement('div')
+    source.className = 'col-src'
+    source.appendChild(tetherFor(file))
+
+    if (hasMoved(file)) {
+      const chip = document.createElement('button')
+      chip.className = 'repull-chip'
+      chip.textContent = 'Re-pull'
+      chip.title = 'Open this file to pull the newer version'
+      chip.addEventListener('click', (event) => {
+        event.stopPropagation()
+        open(file)
+      })
+      source.appendChild(chip)
     }
 
-    const item = row({ selected: file.id === state.fileId, stateName, name: file.name, meta })
-    item.addEventListener('click', () => selectFile(file.id))
-    panes.files.appendChild(item)
+    row.append(fileCell, size, when, source)
+    row.addEventListener('click', () => open(file))
+    body.appendChild(row)
   }
 }
 
-async function renderDetail() {
-  const file = state.fileId ? await getFile(state.fileId) : null
+function emptyState() {
+  const wrap = document.createElement('div')
+  wrap.className = 'empty'
 
-  panes.conflict.classList.toggle('hidden', !file?.edited)
-  if (file?.edited) {
-    panes.conflict.textContent =
-      'You have edited this file here. Updating it from claude.ai will replace your changes.'
-  }
+  const mark = document.createElement('span')
+  mark.className = 'mark'
 
-  el('save-edit').classList.toggle('hidden', state.tab !== 'code')
-  el('save-edit').disabled = !state.dirty
+  const heading = document.createElement('h2')
+  const body = document.createElement('p')
 
-  for (const id of ['update-file', 'export-file', 'delete-file']) el(id).disabled = !file
-
-  if (state.tab === 'preview') {
-    el('preview').classList.remove('hidden')
-    el('editor').classList.add('hidden')
-    await renderInSandbox(el('preview'), file)
+  if (state.query || state.filter !== 'all') {
+    heading.textContent = 'Nothing matches'
+    body.textContent = 'Try a different search, or switch the filter back to All.'
   } else {
-    el('preview').classList.add('hidden')
-    el('editor').classList.remove('hidden')
-    const editable = editor.load(file)
-    if (!editable) {
-      el('editor').textContent = ''
-      const note = document.createElement('p')
-      note.className = 'note'
-      note.textContent = file
-        ? 'This file is binary. Use the Preview tab to view it.'
-        : 'Select a file.'
-      el('editor').appendChild(note)
-    }
+    heading.textContent = 'The tray is empty'
+    body.textContent =
+      'Next time Claude writes a file in a conversation, Trove catches it and it shows up here.'
   }
-}
 
-// ── Selection ─────────────────────────────────────────────────────────────
-
-async function selectConversation(convId) {
-  if (state.dirty && !confirmDiscard()) return
-  state.convId = convId
-  state.fileId = null
-  await renderFiles()
-  await renderDetail()
-  markSelection(panes.conversations, convId, (c) => c)
-}
-
-async function selectFile(fileId) {
-  if (state.dirty && !confirmDiscard()) return
-  state.fileId = fileId
-  await renderFiles()
-  await renderDetail()
-}
-
-function markSelection(container) {
-  // Re-render is cheap here; conversations re-render on demand.
-  renderConversations()
-}
-
-function confirmDiscard() {
-  const ok = window.confirm('You have unsaved changes in the editor. Discard them?')
-  if (ok) state.dirty = false
-  return ok
+  wrap.append(mark, heading, body)
+  return wrap
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────
 
-async function updateFile(fileId) {
-  const file = await getFile(fileId)
-  if (!file) return
+function open(file) {
+  chrome.tabs.create({ url: chrome.runtime.getURL(`options/reader.html?f=${encodeURIComponent(file.id)}`) })
+}
 
-  // Overwrite has no history behind it, so a locally edited file must be an
-  // explicit decision, never a side effect of clicking Update.
-  if (file.edited) {
-    const proceed = window.confirm(
-      `"${file.name}" has local edits.\n\nUpdating replaces them with the current version from claude.ai. This cannot be undone.\n\nUpdate anyway?`,
-    )
-    if (!proceed) return
-  }
+async function removeConversation(convId) {
+  const [conversation, files] = await Promise.all([getConversation(convId), listFiles(convId)])
+  if (!conversation) return
 
-  const response = await chrome.runtime.sendMessage({
-    type: MSG.CAPTURE_FILE,
-    convId: file.convId,
-    path: file.path,
+  const ok = await confirmDeleteConversation({
+    title: conversation.title,
+    fileCount: files.length,
+    editedCount: files.filter((f) => f.edited).length,
   })
-  if (response?.ok === false) {
-    window.alert(`Update failed: ${response.error}`)
-    return
+  if (!ok) return
+
+  await deleteConversation(convId)
+  if (state.convId === convId) state.convId = null
+  render()
+}
+
+/**
+ * Ask each conversation's tab what its live files look like, so the rail and
+ * the Source column can show divergence without the user opening anything.
+ * Best effort: a conversation with no open tab simply stays as last known.
+ */
+async function refreshRemoteState() {
+  const conversations = await listConversations()
+  let changed = false
+
+  for (const conversation of conversations) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: MSG.PEEK,
+        convId: conversation.id,
+      })
+      if (!response?.ok) continue
+
+      liveByConv.set(conversation.id, new Map((response.entries ?? []).map((e) => [e.path, e])))
+
+      const stored = await listFiles(conversation.id)
+      const moved = stored.some(hasMoved)
+      if (conversation.hasMoved !== moved) {
+        await putConversation({ ...conversation, hasMoved: moved })
+      }
+      changed = true
+    } catch {
+      /* no tab for this conversation; leave its last known state alone */
+    }
   }
-  await refresh()
+  if (changed) await render()
 }
 
-async function updateAll() {
-  if (!state.convId) return
-  const response = await chrome.runtime.sendMessage({
-    type: MSG.SYNC_CHECK,
-    convId: state.convId,
-    onlyChanged: true,
-  })
-  if (response?.ok === false) window.alert(`Update failed: ${response.error}`)
-  await refresh()
-}
+// ── Render ────────────────────────────────────────────────────────────────
 
-async function saveEdit() {
-  const value = editor.value()
-  if (value == null || !state.fileId) return
-  const file = await getFile(state.fileId)
-  await putFile({
-    ...file,
-    content: value,
-    hash: await hashContent(value),
-    edited: true,
-    updatedAt: Date.now(),
-  })
-  editor.markSaved()
-  await refresh()
-}
-
-async function removeFile() {
-  const file = await getFile(state.fileId)
-  if (!file) return
-  if (!window.confirm(`Delete "${file.name}" from your vault? This cannot be undone.`)) return
-  await deleteFile(file.id)
-
-  const remaining = await listFiles(file.convId)
-  const conversation = await getConversation(file.convId)
-  if (conversation) {
-    await putConversation({
-      ...conversation,
-      fileCount: remaining.length,
-      bytes: remaining.reduce((n, f) => n + contentSize(f.content), 0),
-    })
-  }
-  state.fileId = null
-  await refresh()
-}
-
-async function removeConversation() {
-  if (!state.convId) return
-  const conversation = await getConversation(state.convId)
-  if (
-    !window.confirm(
-      `Delete "${conversation?.title}" and all ${conversation?.fileCount ?? 0} of its files? This cannot be undone.`,
-    )
-  )
-    return
-  await deleteConversation(state.convId)
-  state.convId = null
-  state.fileId = null
-  await refresh()
-}
-
-async function refresh() {
-  await renderConversations()
-  await renderFiles()
-  await renderDetail()
+async function render() {
+  await renderRail()
+  await renderTable()
 }
 
 // ── Wiring ────────────────────────────────────────────────────────────────
 
-function setTab(tab) {
-  state.tab = tab
-  el('tab-preview').setAttribute('aria-selected', String(tab === 'preview'))
-  el('tab-code').setAttribute('aria-selected', String(tab === 'code'))
-  renderDetail()
-}
-
-editor = createEditor(el('editor'), {
-  onDirtyChange: (dirty) => {
-    state.dirty = dirty
-    el('save-edit').disabled = !dirty
-  },
+el('all-files').addEventListener('click', () => {
+  state.convId = null
+  render()
 })
 
-el('tab-preview').addEventListener('click', () => setTab('preview'))
-el('tab-code').addEventListener('click', () => setTab('code'))
-el('save-edit').addEventListener('click', saveEdit)
-el('update-file').addEventListener('click', () => updateFile(state.fileId))
-el('update-all').addEventListener('click', updateAll)
-el('delete-file').addEventListener('click', removeFile)
-el('delete-conv').addEventListener('click', removeConversation)
-el('export-file').addEventListener('click', async () => {
-  const file = await getFile(state.fileId)
-  if (file) exportFile(file)
-})
-el('export-all').addEventListener('click', async () => {
-  if (!state.convId) return
-  const [conversation, files] = await Promise.all([
-    getConversation(state.convId),
-    listFiles(state.convId),
-  ])
-  if (files.length) await exportConversation(conversation, files)
+el('search').addEventListener('input', (event) => {
+  state.query = event.target.value.trim().toLowerCase()
+  renderTable()
 })
 
-window.addEventListener('beforeunload', (event) => {
-  if (!state.dirty) return
-  event.preventDefault()
-  event.returnValue = ''
+el('filters').addEventListener('click', (event) => {
+  const chip = event.target.closest('.chip')
+  if (!chip) return
+  state.filter = chip.dataset.kind
+  for (const other of el('filters').querySelectorAll('.chip')) {
+    other.setAttribute('aria-selected', String(other === chip))
+  }
+  renderTable()
 })
 
-refresh()
+// Reader tabs write to the same database; refresh when focus comes back.
+window.addEventListener('focus', render)
+
+render().then(refreshRemoteState)

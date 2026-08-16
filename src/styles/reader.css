@@ -1,0 +1,201 @@
+/*
+ * Reader and Editor - the same room, lights on or off the text.
+ *
+ * The file renders on paper, floating in the dark room with a hard shadow.
+ * Every control lives in the bands above and below it, so nothing the
+ * extension owns ever touches the document.
+ */
+
+html,
+body {
+  height: 100%;
+}
+
+.reader {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  height: 100vh;
+}
+
+/* ── Bands ─────────────────────────────────────────────────────────────── */
+
+.band {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  background: var(--panel);
+  border-bottom: 1px solid var(--rule);
+}
+
+.band-top {
+  padding: var(--s3) var(--s4);
+}
+
+.band-bottom {
+  border-bottom: 0;
+  border-top: 1px solid var(--rule);
+  padding: var(--s3) var(--s4);
+  justify-content: space-between;
+}
+
+.back {
+  all: unset;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  color: var(--dim);
+  font-size: 20px;
+  line-height: 1;
+  transition: background var(--motion), color var(--motion);
+}
+
+.back:hover {
+  background: var(--raise);
+  color: var(--bone);
+}
+
+.ident {
+  min-width: 0;
+  flex: 1;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-15);
+  color: var(--bone);
+  overflow-wrap: anywhere;
+}
+
+/* Amber dot: a local edit is a divergence, and gets divergence's colour. */
+.dirty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--moved);
+  flex: 0 0 auto;
+}
+
+.ident .tether {
+  margin-top: 5px;
+  max-width: 420px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex: 0 0 auto;
+}
+
+/* ── Stage ─────────────────────────────────────────────────────────────── */
+
+.stage {
+  position: relative;
+  min-height: 0;
+  background: var(--void);
+  padding: var(--s5);
+  display: flex;
+}
+
+.paper {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  border-radius: 3px;
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+
+.source {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  border-radius: 3px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+}
+
+.source .cm-editor {
+  height: 100%;
+}
+
+.stage-note {
+  margin: auto;
+  color: var(--dim);
+  font: 400 var(--t-13) / 1.6 var(--ui);
+  text-align: center;
+  max-width: 40ch;
+}
+
+/* ── Save bar ──────────────────────────────────────────────────────────── */
+
+.savebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  background: var(--panel);
+  border-top: 1px solid var(--rule);
+}
+
+.savebar-state {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--moved);
+  font-size: var(--t-12);
+}
+
+.savebar-state .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--moved);
+}
+
+.savebar-state .delta {
+  color: var(--dim);
+  margin-left: var(--s2);
+}
+
+.savebar-actions {
+  display: flex;
+  gap: var(--s2);
+}
+
+/* ── Lineage ───────────────────────────────────────────────────────────── */
+
+.lineage {
+  color: var(--dimmer);
+  font-size: var(--t-11);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineage .sep {
+  opacity: 0.55;
+  padding: 0 6px;
+}
+
+.lineage .path {
+  color: var(--dim);
+}
+
+.open-conv {
+  color: var(--dim);
+  font-size: var(--t-11);
+  text-decoration: none;
+  flex: 0 0 auto;
+  transition: color var(--motion);
+}
+
+.open-conv:hover {
+  color: var(--tether);
+}

@@ -14,11 +14,16 @@ import { STATES } from '../lib/diff.js'
 const CARD_SELECTOR = '.artifact-block-cell'
 const MARK = 'data-cfv-mounted'
 
+/*
+ * Copy follows the popup's rule: say file, say where it came from, never say
+ * artifact or sandbox. "Kept" rather than "Saved", because the point is that
+ * Trove is holding onto it, not that a save happened.
+ */
 const LABELS = {
-  [STATES.NEW]: { text: 'Save', title: 'Save this file to your vault' },
-  [STATES.UNCHANGED]: { text: 'Saved', title: 'Already saved and up to date' },
-  [STATES.CHANGED]: { text: 'Update', title: 'This file changed since you saved it' },
-  [STATES.CONFLICT]: { text: 'Update', title: 'You have local edits that updating would replace' },
+  [STATES.NEW]: { text: 'Keep', title: 'Keep this file in Trove' },
+  [STATES.UNCHANGED]: { text: 'Kept', title: 'Kept, and matching the conversation' },
+  [STATES.CHANGED]: { text: 'Re-pull', title: 'The conversation has a newer version' },
+  [STATES.CONFLICT]: { text: 'Re-pull', title: 'You edited this in Trove; re-pulling replaces your copy' },
 }
 
 let styleInjected = false
@@ -41,20 +46,22 @@ function injectStyles() {
       font: 500 12px/1 ui-sans-serif, system-ui, -apple-system, sans-serif;
       letter-spacing: 0.01em;
       cursor: pointer;
-      color: #f5f3ee;
-      background: rgba(200, 106, 70, 0.92);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #14161b;
+      background: #5fd3bc;
+      border: 1px solid transparent;
       transition: background 140ms ease-out, opacity 140ms ease-out;
       vertical-align: middle;
     }
-    .cfv-btn:hover { background: rgba(214, 118, 82, 1); }
-    .cfv-btn:focus-visible { outline: 2px solid #d69a5a; outline-offset: 2px; }
+    .cfv-btn:hover { background: #74dcc7; }
+    .cfv-btn:focus-visible { outline: 2px solid #5fd3bc; outline-offset: 2px; }
+    /* Kept and matching: no colour, because nothing needs attention. */
     .cfv-btn[data-state="unchanged"] {
-      background: rgba(120, 130, 118, 0.22);
-      color: #cfd6cd;
+      background: rgba(124, 132, 146, 0.16);
+      color: #b9bec7;
     }
-    .cfv-btn[data-state="changed"] { background: rgba(190, 140, 48, 0.95); }
-    .cfv-btn[data-state="conflict"] { background: rgba(170, 90, 130, 0.95); }
+    /* Amber is divergence, wherever it appears. */
+    .cfv-btn[data-state="changed"],
+    .cfv-btn[data-state="conflict"] { background: #e5a93c; color: #14161b; }
     .cfv-btn[disabled] { opacity: 0.55; cursor: default; }
     .cfv-dot {
       width: 6px; height: 6px; border-radius: 50%;
@@ -68,15 +75,15 @@ function injectStyles() {
       overflow-y: auto;
       padding: 6px;
       border-radius: 10px;
-      background: #1f1e1c;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      background: #171a20;
+      border: 1px solid #2a303a;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
       font: 400 12px/1.4 ui-sans-serif, system-ui, sans-serif;
-      color: #e9e5dd;
+      color: #e9e7e2;
     }
     .cfv-picker-title {
       padding: 6px 8px 8px;
-      color: #a8a29a;
+      color: #7c8492;
       font-size: 11px;
     }
     .cfv-picker button {
@@ -91,7 +98,7 @@ function injectStyles() {
       font-size: 12px;
     }
     .cfv-picker button:hover,
-    .cfv-picker button:focus-visible { background: rgba(200, 106, 70, 0.28); }
+    .cfv-picker button:focus-visible { background: rgba(95, 211, 188, 0.18); }
   `
   document.documentElement.appendChild(style)
 }

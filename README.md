@@ -1,8 +1,27 @@
-# Claude File Vault
+# Trove
 
-A Chrome extension that turns the files Claude generates in a conversation into a local library you own — browse them, render them, edit them, and pull updates when Claude changes them.
+*Files Claude wrote, kept.*
 
-Files Claude writes live only inside the conversation that produced them. To read one you click its card; to keep one you download it, and it becomes a loose file with no memory of where it came from. This keeps them, grouped by their source conversation, and keeps the link back.
+A Chrome extension that turns the files Claude generates in a conversation into a local library you own — browse them, read them, edit them, and re-pull them when the conversation moves on.
+
+Files Claude writes live only inside the conversation that produced them. To read one you click its card; to keep one you download it, and it becomes a loose file with no memory of where it came from. Trove keeps them, grouped by their source conversation, and keeps the link back.
+
+## Design
+
+The extension is **a frame around someone else's document**. The chrome is graphite and recedes; the captured file gets the only light surface on screen. Colour is rationed to three meanings and used for nothing else:
+
+| | Meaning |
+|---|---|
+| **Aqua** — tether | The file is still linked to a live source |
+| **Amber** — moved | Divergence: the source moved on, an edit is unsaved, or edits are about to be overwritten |
+| **Red** — sever | Destruction, and only destruction |
+
+Four rules the interface holds itself to:
+
+- **Mono is data.** If the filesystem produced the string — name, path, byte count, timestamp — it is IBM Plex Mono. If a person authored it, it is Archivo.
+- **Paper is sacred.** No badge, watermark, toolbar, or overlay is ever drawn on top of a rendered file. Controls live in the bands above and below it.
+- **No history, say so.** Updates overwrite, so every screen that can destroy something names what is lost, in plain words, before it happens.
+- **Local is a feature.** "Nothing leaves this browser" sits in the rail footer permanently, not in a settings page nobody opens.
 
 ## Install
 
@@ -19,9 +38,11 @@ Then in Chrome: **Extensions → Developer mode → Load unpacked → select `di
 
 **Capture.** Open a conversation on claude.ai. Every file card gets a **Save** button. Or click the toolbar icon and use **Capture all** to take the whole conversation at once.
 
-**Browse and render.** Open the library from the popup, or from the extension's options. Conversations on the left, their files in the middle, the selected file on the right — rendered under **Preview**, editable under **Code**.
+**Browse.** Open the library from the popup. Conversations on the rail, files in a table. The Source column is the only coloured thing in the list, so one glance tells you which local copies have fallen behind.
 
-**Update.** Once a file is stored the button reads **Update**, and marks itself when Claude has changed the file upstream. Updating re-pulls the current version.
+**Read.** Click any file to open the **Reader** in its own tab: the document on paper, full width, with every control in the bands above and below it. **Source** turns the same room into an editor.
+
+**Re-pull.** A file whose source has moved on shows amber and offers **Re-pull**. If you have edited your copy, Trove asks before replacing it — that is the one action it cannot undo.
 
 **Auto-capture.** Off by default. Turn it on in the popup and the extension pulls changes as Claude writes them, without you clicking.
 

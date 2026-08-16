@@ -17,6 +17,7 @@ const SCRIPT_ENTRIES = [
   'content/interceptor.js',
   'popup/popup.js',
   'options/options.js',
+  'options/reader.js',
   'options/sandbox.js',
 ]
 
@@ -37,7 +38,7 @@ const configs = [
 
 /** Copy every non-JS asset (manifest, HTML, CSS) preserving its layout. */
 async function copyAssets() {
-  const copyExt = new Set(['.json', '.html', '.css', '.png', '.svg'])
+  const copyExt = new Set(['.json', '.html', '.css', '.png', '.svg', '.woff2'])
   async function walk(dir) {
     for (const entry of await readdir(path.join(SRC, dir), { withFileTypes: true })) {
       const rel = path.join(dir, entry.name)

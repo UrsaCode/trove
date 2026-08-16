@@ -1,118 +1,337 @@
 /*
- * Design tokens.
+ * Trove design tokens.
  *
- * Dark-first with a warm ground: this sits next to claude.ai in the same
- * window, and a cold blue-grey would fight it on the adjacent tab.
+ * The thesis: the extension is a frame around someone else's document. The
+ * chrome is graphite and recedes; the captured file gets the only light
+ * surface on screen.
  *
- * Every token has a value on bare :root, so nothing is defined only inside a
- * media query. The dark block is guarded against an explicit light choice, and
- * restated under [data-theme="dark"] so an in-app toggle wins in both
- * directions.
+ * Colour is rationed to three meanings and nothing else:
+ *   tether (aqua)  the file is still linked to a live source
+ *   moved  (amber) divergence - source moved on, edit unsaved, edits at risk
+ *   sever  (red)   destruction, and only destruction
+ *
+ * Dark only. This is a graphite room by design, not a theme that happens to
+ * be dark, so there is no light variant to fight over.
  */
 
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/archivo-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/archivo-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/archivo-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+}
+
 :root {
-  /* Ground and surfaces - warm paper in light. */
-  --ink: #f3efe6;
-  --ink-raised: #fbf9f5;
-  --ink-sunken: #eae5d9;
-  --ink-line: #dcd5c6;
+  --void: #0e1014;
+  --panel: #171a20;
+  --raise: #1f232b;
+  --raise2: #262b34;
+  --rule: #2a303a;
 
-  /* Text. */
-  --bone: #23211c;
-  --bone-dim: #6b6459;
-  --bone-faint: #97907f;
+  --bone: #e9e7e2;
+  --dim: #7c8492;
+  --dimmer: #585f6b;
 
-  /* One accent, for actions only. */
-  --clay: #b4552f;
-  --clay-hover: #9c4726;
-  --clay-ink: #fdf8f4;
+  --tether: #5fd3bc;
+  --moved: #e5a93c;
+  --sever: #e0664e;
 
-  /* State. Each pairs with --state-ink at AA or better. */
-  --state-new: #b4552f;
-  --state-changed: #8a6410;
-  --state-current: #4a6b3f;
-  --state-edited: #8a3f68;
-  --state-orphan: #97907f;
-  --state-ink: #fbf9f5;
+  --paper: #f7f5f0;
+  --ink: #14161b;
 
-  --focus: #2f6f9e;
+  /* MONO IS DATA: if the filesystem produced the string it is mono; if a
+     person authored it, it is Archivo. */
+  --ui: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Type. The monospace face is the display face - see app.css. */
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas,
-    monospace;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+  --t-10: 10px;
+  --t-11: 11px;
+  --t-12: 12px;
+  --t-13: 13px;
+  --t-15: 15px;
+  --t-19: 19px;
 
-  --text-xs: 11px;
-  --text-sm: 12.5px;
-  --text-md: 14px;
-  --text-lg: 19px;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 36px;
 
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 36px;
+  --r: 8px;
+  --r-sm: 5px;
+  --r-pill: 999px;
 
-  --radius: 8px;
-  --radius-sm: 5px;
-
-  --edge: 3px; /* the state rule on a row's leading edge */
+  --shadow-paper: 0 24px 60px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
   --motion: 140ms cubic-bezier(0.2, 0, 0.2, 1);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --ink: #14130f;
-    --ink-raised: #1c1a16;
-    --ink-sunken: #100f0c;
-    --ink-line: #2c2823;
-
-    --bone: #ede7dc;
-    --bone-dim: #9a9287;
-    --bone-faint: #6f6a60;
-
-    --clay: #c86a46;
-    --clay-hover: #d87c56;
-    --clay-ink: #1a1310;
-
-    --state-new: #c86a46;
-    --state-changed: #c99a3e;
-    --state-current: #6e8b62;
-    --state-edited: #a6628a;
-    --state-orphan: #6f6a60;
-    --state-ink: #14130f;
-
-    --focus: #7bb6e0;
-  }
-}
-
-:root[data-theme='dark'] {
-  --ink: #14130f;
-  --ink-raised: #1c1a16;
-  --ink-sunken: #100f0c;
-  --ink-line: #2c2823;
-
-  --bone: #ede7dc;
-  --bone-dim: #9a9287;
-  --bone-faint: #6f6a60;
-
-  --clay: #c86a46;
-  --clay-hover: #d87c56;
-  --clay-ink: #1a1310;
-
-  --state-new: #c86a46;
-  --state-changed: #c99a3e;
-  --state-current: #6e8b62;
-  --state-edited: #a6628a;
-  --state-orphan: #6f6a60;
-  --state-ink: #14130f;
-
-  --focus: #7bb6e0;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion: 1ms linear;
   }
+}
+
+/* ── Primitives shared by every surface ────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--bone);
+  font: 400 var(--t-13) / 1.55 var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--tether);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Anything the filesystem produced. */
+.mono {
+  font-family: var(--mono);
+  font-size: var(--t-12);
+  letter-spacing: 0.01em;
+}
+
+.eyebrow {
+  font: 400 var(--t-10) / 1 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dimmer);
+}
+
+/*
+ * The tether: a node, a wire, and a label. The signature element - it draws
+ * the link back to the source as an actual line, and the Source column is the
+ * only place colour appears in a list.
+ */
+.tether {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font: 400 var(--t-10) / 1.28 var(--mono);
+  letter-spacing: 0.01em;
+  color: var(--dimmer);
+  min-width: 0;
+}
+
+.tether .node {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--tether);
+}
+
+.tether .wire {
+  flex: 1 1 0;
+  height: 1px;
+  min-width: 16px;
+  background: linear-gradient(90deg, var(--tether), rgba(95, 211, 188, 0.15));
+}
+
+.tether .lbl {
+  flex: 0 0 auto;
+  color: var(--tether);
+  white-space: nowrap;
+}
+
+/* Divergence: the wire goes dashed and everything turns amber. */
+.tether[data-state='moved'] .node,
+.tether[data-state='unsaved'] .node {
+  background: var(--moved);
+}
+
+.tether[data-state='moved'] .wire,
+.tether[data-state='unsaved'] .wire {
+  background: none;
+  border-top: 1px dashed var(--moved);
+  opacity: 0.7;
+}
+
+.tether[data-state='moved'] .lbl,
+.tether[data-state='unsaved'] .lbl {
+  color: var(--moved);
+}
+
+.tether[data-state='gone'] .node {
+  background: var(--dimmer);
+}
+
+.tether[data-state='gone'] .wire {
+  background: none;
+  border-top: 1px dotted var(--dimmer);
+}
+
+.tether[data-state='gone'] .lbl {
+  color: var(--dimmer);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+
+.btn {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  padding: 7px 13px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--rule);
+  background: var(--raise);
+  color: var(--bone);
+  font: 400 var(--t-12) / 1 var(--ui);
+  transition: background var(--motion), border-color var(--motion), color var(--motion);
+}
+
+.btn:hover {
+  background: var(--raise2);
+  border-color: var(--dimmer);
+}
+
+.btn[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn[disabled]:hover {
+  background: var(--raise);
+  border-color: var(--rule);
+}
+
+/* Aqua is only ever about the link back to the source. */
+.btn-tether {
+  background: var(--tether);
+  border-color: transparent;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.btn-tether:hover {
+  background: #74dcc7;
+  border-color: transparent;
+}
+
+.btn-sever {
+  color: var(--sever);
+  border-color: transparent;
+  background: transparent;
+}
+
+.btn-sever:hover {
+  background: rgba(224, 102, 78, 0.12);
+  border-color: rgba(224, 102, 78, 0.4);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--dim);
+}
+
+.btn-ghost:hover {
+  background: var(--raise);
+  border-color: transparent;
+  color: var(--bone);
+}
+
+/* A segmented toggle - Render / Source. */
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  border: 1px solid var(--rule);
+}
+
+.seg button {
+  all: unset;
+  cursor: pointer;
+  padding: 5px 11px;
+  border-radius: 3px;
+  font: 400 var(--t-10) / 1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  transition: background var(--motion), color var(--motion);
+}
+
+.seg button:hover {
+  color: var(--bone);
+}
+
+.seg button[aria-selected='true'] {
+  background: var(--raise2);
+  color: var(--bone);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: var(--r-pill);
+  font: 400 var(--t-10) / 1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pill .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pill[data-state='live'] {
+  color: var(--tether);
+  background: rgba(95, 211, 188, 0.12);
+}
+
+.pill[data-state='moved'] {
+  color: var(--moved);
+  background: rgba(229, 169, 60, 0.12);
+}
+
+.hidden {
+  display: none !important;
 }

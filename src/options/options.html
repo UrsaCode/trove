@@ -3,69 +3,66 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Claude File Vault</title>
+    <title>Trove</title>
     <link rel="stylesheet" href="../styles/tokens.css" />
-    <link rel="stylesheet" href="../styles/app.css" />
+    <link rel="stylesheet" href="../styles/library.css" />
   </head>
   <body>
-    <div class="app">
-      <header class="topbar">
-        <div class="wordmark">Claude File <span>Vault</span></div>
-        <div class="topbar-meta" id="totals"></div>
-      </header>
+    <div class="library">
+      <!-- Rail. Conversations, because that is how you remember a file. -->
+      <aside class="rail">
+        <div class="rail-head">
+          <span class="mark" aria-hidden="true"></span>
+          <span class="wordmark">Trove</span>
+        </div>
 
-      <div class="panes">
-        <!-- Conversations -->
-        <section class="pane" aria-label="Conversations">
-          <div class="pane-head"><span class="eyebrow">Conversations</span></div>
-          <div class="pane-body" id="conversations" role="listbox" tabindex="0"></div>
-        </section>
+        <button class="rail-item rail-all" id="all-files" aria-selected="true">
+          <div class="rail-title">All files</div>
+          <div class="rail-sub mono" id="all-sub"></div>
+        </button>
 
-        <!-- Files -->
-        <section class="pane" aria-label="Files">
-          <div class="pane-head">
-            <span class="eyebrow" id="files-eyebrow">Files</span>
-            <div class="actions">
-              <button class="btn" id="update-all" title="Re-pull changed files from claude.ai">
-                Update all
-              </button>
-              <button class="btn" id="export-all" title="Download this conversation as a zip">
-                Export
-              </button>
-              <button class="btn btn-danger" id="delete-conv" title="Remove this conversation">
-                Delete
-              </button>
-            </div>
-          </div>
-          <div class="pane-body" id="files" role="listbox" tabindex="0"></div>
-        </section>
+        <div class="rail-eyebrow eyebrow">Conversations</div>
+        <div class="rail-list" id="conversations"></div>
 
-        <!-- Detail -->
-        <section class="pane" aria-label="File detail">
-          <div class="pane-head">
-            <div class="tabs" role="tablist">
-              <button class="tab" id="tab-preview" role="tab" aria-selected="true">Preview</button>
-              <button class="tab" id="tab-code" role="tab" aria-selected="false">Code</button>
-            </div>
-            <div class="actions">
-              <button class="btn btn-primary hidden" id="save-edit">Save</button>
-              <button class="btn" id="update-file">Update</button>
-              <button class="btn" id="export-file">Export</button>
-              <button class="btn btn-danger" id="delete-file">Delete</button>
-            </div>
+        <footer class="rail-foot">
+          <div class="mono rail-kept" id="kept"></div>
+          <div class="meter"><span id="meter-fill"></span></div>
+          <div class="mono rail-local">Nothing leaves this browser</div>
+        </footer>
+      </aside>
+
+      <!-- Files -->
+      <main class="content">
+        <div class="toolbar">
+          <div class="search">
+            <span class="search-icon" aria-hidden="true"></span>
+            <input
+              id="search"
+              type="search"
+              class="mono"
+              placeholder="filename, extension, or conversation"
+              aria-label="Search files"
+            />
           </div>
-          <div id="conflict" class="warn hidden"></div>
-          <div class="detail-body">
-            <iframe
-              id="preview"
-              title="File preview"
-              src="sandbox.html"
-              sandbox="allow-scripts allow-forms allow-modals allow-popups"
-            ></iframe>
-            <div id="editor" class="hidden"></div>
+          <div class="filters" id="filters" role="tablist">
+            <button class="chip" data-kind="all" aria-selected="true">All</button>
+            <button class="chip" data-kind="pages" aria-selected="false">Pages</button>
+            <button class="chip" data-kind="images" aria-selected="false">Images</button>
+            <button class="chip" data-kind="code" aria-selected="false">Code</button>
+            <button class="chip" data-kind="data" aria-selected="false">Data</button>
           </div>
-        </section>
-      </div>
+        </div>
+
+        <div class="table" id="table">
+          <div class="thead">
+            <div class="col-file eyebrow">File</div>
+            <div class="col-size eyebrow">Size</div>
+            <div class="col-when eyebrow">Captured</div>
+            <div class="col-src eyebrow">Source</div>
+          </div>
+          <div class="tbody" id="rows"></div>
+        </div>
+      </main>
     </div>
 
     <script src="options.js"></script>

@@ -1,0 +1,480 @@
+/*
+ * Library - the options page.
+ *
+ * Conversations on the left because that is how you actually remember a file:
+ * not by its name, by the thing you were doing when it appeared.
+ *
+ * The Source column is the only place colour appears in the list. Scan it and
+ * you know which local copies are behind - no badges, no counts.
+ */
+
+html,
+body {
+  height: 100%;
+}
+
+.library {
+  display: grid;
+  grid-template-columns: 244px 1fr;
+  height: 100vh;
+}
+
+/* ── Rail ──────────────────────────────────────────────────────────────── */
+
+.rail {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  min-height: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--rule);
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s4);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* The mark: an open tray catching a file. */
+.mark {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.mark::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 18px;
+  height: 11px;
+  border: 2px solid var(--bone);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+}
+
+.mark::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 1.5px;
+  background: var(--tether);
+}
+
+.wordmark {
+  font: 700 var(--t-15) / 1 var(--ui);
+  letter-spacing: -0.01em;
+}
+
+.rail-item {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: var(--s3) var(--s4);
+  border-left: 2px solid transparent;
+  transition: background var(--motion);
+}
+
+/* Destruction stays out of sight until you reach for it, then is explicit. */
+.rail-remove {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  color: var(--dimmer);
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity var(--motion), background var(--motion), color var(--motion);
+}
+
+.rail-item:hover .rail-remove,
+.rail-remove:focus-visible {
+  opacity: 1;
+}
+
+.rail-remove:hover {
+  background: rgba(224, 102, 78, 0.14);
+  color: var(--sever);
+}
+
+/* Saving a copy out is not destruction, so it never wears the sever colour. */
+.rail-save:hover {
+  background: var(--raise2);
+  color: var(--bone);
+}
+
+.rail-item:hover {
+  background: var(--raise);
+}
+
+.rail-item[aria-selected='true'] {
+  background: var(--raise);
+  border-left-color: var(--tether);
+}
+
+.rail-all {
+  border-bottom: 1px solid var(--rule);
+}
+
+.rail-item > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.rail-title {
+  font-size: var(--t-13);
+  color: var(--bone);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Amber dot flags a conversation holding something newer than your copy. */
+.rail-title .moved-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--moved);
+  flex: 0 0 auto;
+}
+
+.rail-sub {
+  margin-top: 3px;
+  color: var(--dimmer);
+  font-size: var(--t-11);
+}
+
+.rail-eyebrow {
+  padding: var(--s4) var(--s4) var(--s2);
+}
+
+.rail-list {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.rail-foot {
+  padding: var(--s4);
+  border-top: 1px solid var(--rule);
+}
+
+.rail-kept {
+  color: var(--dim);
+  font-size: var(--t-11);
+}
+
+.meter {
+  height: 2px;
+  margin: var(--s2) 0;
+  background: var(--rule);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.meter span {
+  display: block;
+  height: 100%;
+  background: var(--tether);
+  width: 0;
+  transition: width var(--motion);
+}
+
+.rail-local {
+  color: var(--dimmer);
+  font-size: var(--t-10);
+}
+
+/* ── Content ───────────────────────────────────────────────────────────── */
+
+.content {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s4);
+}
+
+.search {
+  position: relative;
+  flex: 1;
+  max-width: 380px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -6px;
+  border: 1.5px solid var(--dimmer);
+  border-radius: 50%;
+}
+
+.search-icon::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  width: 5px;
+  height: 1.5px;
+  background: var(--dimmer);
+  transform: rotate(45deg);
+}
+
+.search input {
+  width: 100%;
+  padding: 9px 12px 9px 32px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--rule);
+  background: var(--raise);
+  color: var(--bone);
+  font-size: var(--t-12);
+  outline: none;
+}
+
+.search input::placeholder {
+  color: var(--dimmer);
+}
+
+.search input:focus {
+  border-color: var(--dim);
+}
+
+.filters {
+  display: flex;
+  gap: var(--s1);
+  margin-left: auto;
+}
+
+.chip {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  font: 400 var(--t-10) / 1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  transition: background var(--motion), color var(--motion);
+}
+
+.chip:hover {
+  color: var(--bone);
+  background: var(--raise);
+}
+
+.chip[aria-selected='true'] {
+  background: var(--raise2);
+  color: var(--bone);
+}
+
+/* ── Table ─────────────────────────────────────────────────────────────── */
+
+.table {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  margin: 0 var(--s4) var(--s4);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.thead,
+.trow {
+  display: grid;
+  grid-template-columns: 1fr 90px 130px 260px;
+  align-items: center;
+  gap: var(--s4);
+  padding: 0 var(--s4);
+}
+
+.thead {
+  height: 38px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.col-size,
+.col-when {
+  text-align: right;
+}
+
+.tbody {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.trow {
+  all: unset;
+  display: grid;
+  grid-template-columns: 1fr 90px 130px 260px;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  cursor: pointer;
+  border-bottom: 1px solid var(--rule);
+  transition: background var(--motion);
+}
+
+.trow:hover {
+  background: var(--raise);
+}
+
+.col-file {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+/* A tile standing in for the file - its own thumbnail when we can make one. */
+.tile {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 26px;
+  border-radius: 3px;
+  background: var(--raise2);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tile .glyph {
+  width: 14px;
+  height: 10px;
+  border-top: 1.5px solid var(--dimmer);
+  border-bottom: 1.5px solid var(--dimmer);
+}
+
+.file-name {
+  font: 400 var(--t-12) / 1.35 var(--mono);
+  color: var(--bone);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-conv {
+  margin-top: 2px;
+  font-size: var(--t-11);
+  color: var(--dimmer);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-size,
+.col-when {
+  font: 400 var(--t-11) / 1 var(--mono);
+  color: var(--dim);
+}
+
+.col-src {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.col-src .tether {
+  flex: 1;
+}
+
+.repull-chip {
+  all: unset;
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--moved);
+  color: var(--moved);
+  font: 400 var(--t-10) / 1.15 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  transition: background var(--motion);
+}
+
+.repull-chip:hover {
+  background: rgba(229, 169, 60, 0.14);
+}
+
+/* ── Empty states are real screens ─────────────────────────────────────── */
+
+.empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s3);
+  height: 100%;
+  padding: var(--s6);
+  text-align: center;
+}
+
+.empty .mark {
+  width: 34px;
+  height: 34px;
+  opacity: 0.5;
+  margin-bottom: var(--s2);
+}
+
+.empty .mark::before {
+  width: 34px;
+  height: 21px;
+  border-width: 2.5px;
+  border-radius: 0 0 11px 11px;
+}
+
+.empty .mark::after {
+  left: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.empty h2 {
+  margin: 0;
+  font: 600 var(--t-15) / 1.35 var(--ui);
+  color: var(--bone);
+}
+
+.empty p {
+  margin: 0;
+  max-width: 42ch;
+  color: var(--dim);
+  font-size: var(--t-13);
+  line-height: 1.6;
+}
