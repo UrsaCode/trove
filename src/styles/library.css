@@ -278,9 +278,22 @@ body {
   margin: 0 var(--s4) var(--s4);
 }
 
+/*
+ * With nothing selected there is no document to frame, so the stage does not
+ * appear at all and the list takes the whole width. An empty render area
+ * would be a panel asking to be ignored.
+ */
+.split[data-detail='off'] {
+  grid-template-columns: 1fr;
+}
+
+.split[data-detail='off'] .detail {
+  display: none;
+}
+
 /* Below this the two panes stop being readable side by side. */
 @media (max-width: 1180px) {
-  .split {
+  .split:not([data-detail='off']) {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(220px, 1fr) minmax(260px, 1fr);
   }
@@ -464,12 +477,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.detail-name:empty::before {
-  content: 'No file selected';
-  color: var(--dimmer);
-  font-family: var(--ui);
 }
 
 .detail-ident .tether {

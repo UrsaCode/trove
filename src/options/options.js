@@ -318,6 +318,7 @@ function paintDetailTether(file) {
 
 async function select(file) {
   state.selected = file
+  el('split').dataset.detail = 'on'
   el('detail-name').textContent = file.name
   el('full-screen').disabled = false
   el('open-reader').disabled = false
@@ -336,10 +337,13 @@ async function select(file) {
 
 function clearSelection() {
   state.selected = null
+  el('split').dataset.detail = 'off'
   el('detail-name').textContent = ''
   el('full-screen').disabled = true
   el('open-reader').disabled = true
   paintDetailTether(null)
+  // Reset the frame even though it is hidden, so the next selection never
+  // shows the previous file for a beat before its own render arrives.
   renderInSandbox(el('preview'), null)
 }
 
