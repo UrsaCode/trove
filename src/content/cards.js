@@ -221,8 +221,11 @@ export function mountCards({ getEntries, getStates, onCapture }) {
       }
     })
 
-    // The card's action row is its last flex child; fall back to the card.
-    const host = cardEl.querySelector('div:last-child') ?? cardEl
+    // The cell is a `justify-between` flex row: content first, actions last.
+    // Use lastElementChild, not a `:last-child` selector - the latter matches
+    // the first *descendant* that happens to be a last child, which is a
+    // deeply nested div, not the action area.
+    const host = cardEl.lastElementChild ?? cardEl
     host.appendChild(button)
 
     refresh().catch(() => {})
