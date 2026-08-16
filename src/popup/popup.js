@@ -69,7 +69,7 @@ function tile(file) {
   return box
 }
 
-function paintTether({ counts, capturing }) {
+function paintTether({ counts }) {
   const tether = el('tether')
   const label = tether.querySelector('.lbl')
   const moved = counts.changed + counts.conflict
@@ -80,25 +80,40 @@ function paintTether({ counts, capturing }) {
     el('repull-chip').classList.remove('hidden')
   } else {
     tether.removeAttribute('data-state')
-    label.textContent = capturing
-      ? `${counts.total} files · this tab`
-      : `${counts.total} files`
+    const kept = counts.unchanged
+    label.textContent =
+      counts.new > 0 ? `${kept} of ${counts.total} kept` : `${counts.total} files · this tab`
     el('repull-chip').classList.add('hidden')
   }
 }
 
-function paintStatus({ counts }) {
+/**
+ * The status pill has to describe what Trove is actually doing.
+ *
+ * "Capturing" is a claim about ongoing activity, so it only appears when
+ * auto-capture is on and there is genuinely something to catch. With
+ * auto-capture off - the default - Trove is watching, not capturing, and the
+ * honest answer is to say nothing at all.
+ */
+function paintStatus({ counts }, autoCapture) {
   const status = el('status')
   const moved = counts.changed + counts.conflict
-  status.classList.remove('hidden')
 
   if (moved > 0) {
+    status.classList.remove('hidden')
     status.dataset.state = 'moved'
     el('status-text').textContent = `${moved} newer`
-  } else {
+    return
+  }
+
+  if (autoCapture) {
+    status.classList.remove('hidden')
     status.dataset.state = 'live'
     el('status-text').textContent = 'Capturing'
+    return
   }
+
+  status.classList.add('hidden')
 }
 
 function renderList(diff, storedByPath) {
@@ -195,8 +210,9 @@ async function load() {
   const storedByPath = new Map(stored.map((f) => [f.path, f]))
   const diff = diffConversation(response.entries ?? [], stored)
 
-  paintStatus(diff)
-  paintTether({ counts: diff.counts, capturing: true })
+  const { autoCapture } = await getSettings()
+  paintStatus(diff, autoCapture)
+  paintTether({ counts: diff.counts })
   renderList(diff, storedByPath)
 
   const pending = diff.counts.new + diff.counts.changed
@@ -222,7 +238,12 @@ async function capture() {
 el('capture').addEventListener('click', capture)
 el('repull-chip').addEventListener('click', capture)
 el('open-library').addEventListener('click', () => chrome.runtime.openOptionsPage())
-el('auto').addEventListener('change', (event) => setSetting('autoCapture', event.target.checked))
+el('auto').addEventListener('change', async (event) => {
+  await setSetting('autoCapture', event.target.checked)
+  // Repaint immediately: the status pill is a claim about what Trove is doing
+  // right now, so it has to follow the toggle without waiting for a reopen.
+  await load()
+})
 
 getSettings().then((settings) => {
   el('auto').checked = settings.autoCapture
