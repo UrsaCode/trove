@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Claude File Vault</title>
+    <link rel="stylesheet" href="../styles/tokens.css" />
+    <link rel="stylesheet" href="../styles/popup.css" />
+  </head>
+  <body>
+    <header class="head">
+      <div class="wordmark">Claude File <span>Vault</span></div>
+      <div class="title" id="conv-title">Checking this page…</div>
+      <div class="summary" id="summary"></div>
+    </header>
+
+    <div class="list" id="list"></div>
+
+    <footer class="foot">
+      <button class="btn btn-primary" id="capture">Capture all</button>
+      <label class="toggle">
+        <input type="checkbox" id="auto" />
+        <span>Capture automatically</span>
+      </label>
+      <button class="link" id="open-library">Open library</button>
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

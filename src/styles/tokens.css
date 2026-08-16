@@ -1,0 +1,118 @@
+/*
+ * Design tokens.
+ *
+ * Dark-first with a warm ground: this sits next to claude.ai in the same
+ * window, and a cold blue-grey would fight it on the adjacent tab.
+ *
+ * Every token has a value on bare :root, so nothing is defined only inside a
+ * media query. The dark block is guarded against an explicit light choice, and
+ * restated under [data-theme="dark"] so an in-app toggle wins in both
+ * directions.
+ */
+
+:root {
+  /* Ground and surfaces - warm paper in light. */
+  --ink: #f3efe6;
+  --ink-raised: #fbf9f5;
+  --ink-sunken: #eae5d9;
+  --ink-line: #dcd5c6;
+
+  /* Text. */
+  --bone: #23211c;
+  --bone-dim: #6b6459;
+  --bone-faint: #97907f;
+
+  /* One accent, for actions only. */
+  --clay: #b4552f;
+  --clay-hover: #9c4726;
+  --clay-ink: #fdf8f4;
+
+  /* State. Each pairs with --state-ink at AA or better. */
+  --state-new: #b4552f;
+  --state-changed: #8a6410;
+  --state-current: #4a6b3f;
+  --state-edited: #8a3f68;
+  --state-orphan: #97907f;
+  --state-ink: #fbf9f5;
+
+  --focus: #2f6f9e;
+
+  /* Type. The monospace face is the display face - see app.css. */
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas,
+    monospace;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-md: 14px;
+  --text-lg: 19px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 36px;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+
+  --edge: 3px; /* the state rule on a row's leading edge */
+  --motion: 140ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ink: #14130f;
+    --ink-raised: #1c1a16;
+    --ink-sunken: #100f0c;
+    --ink-line: #2c2823;
+
+    --bone: #ede7dc;
+    --bone-dim: #9a9287;
+    --bone-faint: #6f6a60;
+
+    --clay: #c86a46;
+    --clay-hover: #d87c56;
+    --clay-ink: #1a1310;
+
+    --state-new: #c86a46;
+    --state-changed: #c99a3e;
+    --state-current: #6e8b62;
+    --state-edited: #a6628a;
+    --state-orphan: #6f6a60;
+    --state-ink: #14130f;
+
+    --focus: #7bb6e0;
+  }
+}
+
+:root[data-theme='dark'] {
+  --ink: #14130f;
+  --ink-raised: #1c1a16;
+  --ink-sunken: #100f0c;
+  --ink-line: #2c2823;
+
+  --bone: #ede7dc;
+  --bone-dim: #9a9287;
+  --bone-faint: #6f6a60;
+
+  --clay: #c86a46;
+  --clay-hover: #d87c56;
+  --clay-ink: #1a1310;
+
+  --state-new: #c86a46;
+  --state-changed: #c99a3e;
+  --state-current: #6e8b62;
+  --state-edited: #a6628a;
+  --state-orphan: #6f6a60;
+  --state-ink: #14130f;
+
+  --focus: #7bb6e0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion: 1ms linear;
+  }
+}

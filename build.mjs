@@ -7,8 +7,12 @@ const watch = process.argv.includes('--watch')
 const SRC = 'src'
 const OUT = 'dist'
 
-const ENTRIES = [
-  'background/sw.js',
+// The service worker is declared "type": "module", so it ships as ESM.
+const MODULE_ENTRIES = ['background/sw.js']
+
+// Everything else is loaded as a classic script - content scripts cannot be
+// modules at all, and IIFE keeps the page globals untouched.
+const SCRIPT_ENTRIES = [
   'content/main.js',
   'content/interceptor.js',
   'popup/popup.js',
@@ -16,7 +20,22 @@ const ENTRIES = [
   'options/sandbox.js',
 ]
 
-/** Copy every non-JS asset (manifest, HTML, CSS) preserving its relative layout. */
+const common = {
+  outdir: OUT,
+  outbase: SRC,
+  bundle: true,
+  target: 'chrome120',
+  sourcemap: watch ? 'inline' : false,
+  minify: !watch,
+  logLevel: 'warning',
+}
+
+const configs = [
+  { ...common, entryPoints: MODULE_ENTRIES.map((e) => path.join(SRC, e)), format: 'esm' },
+  { ...common, entryPoints: SCRIPT_ENTRIES.map((e) => path.join(SRC, e)), format: 'iife' },
+]
+
+/** Copy every non-JS asset (manifest, HTML, CSS) preserving its layout. */
 async function copyAssets() {
   const copyExt = new Set(['.json', '.html', '.css', '.png', '.svg'])
   async function walk(dir) {
@@ -33,37 +52,18 @@ async function copyAssets() {
   await walk('')
 }
 
-const options = {
-  entryPoints: ENTRIES.map((e) => path.join(SRC, e)),
-  outdir: OUT,
-  outbase: SRC,
-  bundle: true,
-  format: 'esm',
-  target: 'chrome120',
-  sourcemap: watch ? 'inline' : false,
-  minify: !watch,
-  logLevel: 'info',
-}
-
 if (existsSync(OUT)) await rm(OUT, { recursive: true })
 await mkdir(OUT, { recursive: true })
 
 if (watch) {
-  const ctx = await esbuild.context({
-    ...options,
-    plugins: [
-      {
-        name: 'copy-assets',
-        setup(build) {
-          build.onEnd(() => copyAssets())
-        },
-      },
-    ],
-  })
-  await ctx.watch()
-  console.log('watching…')
+  for (const config of configs) {
+    const ctx = await esbuild.context(config)
+    await ctx.watch()
+  }
+  await copyAssets()
+  console.log('watching...')
 } else {
-  await esbuild.build(options)
+  await Promise.all(configs.map((config) => esbuild.build(config)))
   await copyAssets()
   console.log(`built -> ${OUT}/`)
 }

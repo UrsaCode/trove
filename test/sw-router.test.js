@@ -163,6 +163,29 @@ describe('FILES_CHANGED', () => {
   })
 })
 
+describe('GET_STATUS', () => {
+  it('returns the stored files for a conversation', async () => {
+    const { handleMessage } = router()
+    await handleMessage(
+      {
+        type: MSG.SAVE_FILES,
+        conversation: { id: CONV, title: 'T', orgId: 'o', url: 'u' },
+        files: [fileMsg('/o/a.html', 'aaa')],
+      },
+      SENDER,
+    )
+    const result = await handleMessage({ type: MSG.GET_STATUS, convId: CONV }, SENDER)
+    expect(result.ok).toBe(true)
+    expect(result.files.map((f) => f.path)).toEqual(['/o/a.html'])
+  })
+
+  it('returns an empty list for an unknown conversation', async () => {
+    const { handleMessage } = router()
+    const result = await handleMessage({ type: MSG.GET_STATUS, convId: 'nope' }, SENDER)
+    expect(result.files).toEqual([])
+  })
+})
+
 describe('unknown messages', () => {
   it('returns an error result rather than throwing', async () => {
     const { handleMessage } = router()

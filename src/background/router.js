@@ -65,6 +65,8 @@ export function createRouter({
           return await saveFiles(message)
         case MSG.FILES_CHANGED:
           return await filesChanged(message, sender)
+        case MSG.GET_STATUS:
+          return { ok: true, files: await listFiles(message.convId) }
         default:
           return { ok: false, error: `Unknown message type: ${message?.type ?? '(none)'}` }
       }
