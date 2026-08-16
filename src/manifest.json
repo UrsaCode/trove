@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Claude File Vault",
+  "version": "0.1.0",
+  "description": "Capture, render, edit and update the files Claude generates in a conversation.",
+
+  "permissions": ["storage", "unlimitedStorage", "tabs"],
+  "host_permissions": ["https://claude.ai/*"],
+
+  "background": {
+    "service_worker": "background/sw.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["content/interceptor.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["content/main.js"],
+      "world": "ISOLATED",
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Claude File Vault"
+  },
+
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+
+  "sandbox": {
+    "pages": ["options/sandbox.html"]
+  },
+
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts allow-forms allow-modals allow-popups; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; child-src 'self' blob: data:; frame-src 'self' blob: data:;"
+  }
+}
