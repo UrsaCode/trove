@@ -26,35 +26,10 @@ body {
   flex: 1;
 }
 
-/* The mark: an open tray catching a file. */
+/* The mark: an open tray catching a file. Drawn from src/ui/mark.js. */
 .mark {
-  width: 16px;
-  height: 16px;
-  position: relative;
   flex: 0 0 auto;
-}
-
-.mark::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 16px;
-  height: 10px;
-  border: 2px solid var(--bone);
-  border-top: 0;
-  border-radius: 0 0 5px 5px;
-}
-
-.mark::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 1.5px;
-  background: var(--tether);
+  color: var(--bone);
 }
 
 .wordmark {
@@ -197,23 +172,8 @@ body {
 }
 
 .message .mark {
-  width: 30px;
-  height: 30px;
-  opacity: 0.5;
+  opacity: 0.55;
   margin-bottom: var(--s1);
-}
-
-.message .mark::before {
-  width: 30px;
-  height: 19px;
-  border-radius: 0 0 10px 10px;
-}
-
-.message .mark::after {
-  left: 10px;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
 }
 
 .message strong {

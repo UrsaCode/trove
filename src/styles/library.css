@@ -37,35 +37,10 @@ body {
   border-bottom: 1px solid var(--rule);
 }
 
-/* The mark: an open tray catching a file. */
+/* The mark: an open tray catching a file. Drawn from src/ui/mark.js. */
 .mark {
-  width: 18px;
-  height: 18px;
   flex: 0 0 auto;
-  position: relative;
-}
-
-.mark::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 18px;
-  height: 11px;
-  border: 2px solid var(--bone);
-  border-top: 0;
-  border-radius: 0 0 6px 6px;
-}
-
-.mark::after {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 1.5px;
-  background: var(--tether);
+  color: var(--bone);
 }
 
 .wordmark {
@@ -293,13 +268,31 @@ body {
   color: var(--bone);
 }
 
+/* ── Split: list beside the file it is describing ──────────────────────── */
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(420px, 1fr) minmax(400px, 1fr);
+  gap: var(--s4);
+  min-height: 0;
+  margin: 0 var(--s4) var(--s4);
+}
+
+/* Below this the two panes stop being readable side by side. */
+@media (max-width: 1180px) {
+  .split {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(220px, 1fr) minmax(260px, 1fr);
+  }
+}
+
 /* ── Table ─────────────────────────────────────────────────────────────── */
 
 .table {
   display: grid;
   grid-template-rows: auto 1fr;
   min-height: 0;
-  margin: 0 var(--s4) var(--s4);
+  min-width: 0;
   border: 1px solid var(--rule);
   border-radius: var(--r);
   overflow: hidden;
@@ -309,9 +302,9 @@ body {
 .thead,
 .trow {
   display: grid;
-  grid-template-columns: 1fr 90px 130px 260px;
+  grid-template-columns: minmax(0, 1fr) 74px 96px minmax(140px, 210px);
   align-items: center;
-  gap: var(--s4);
+  gap: var(--s3);
   padding: 0 var(--s4);
 }
 
@@ -333,17 +326,23 @@ body {
 .trow {
   all: unset;
   display: grid;
-  grid-template-columns: 1fr 90px 130px 260px;
+  grid-template-columns: minmax(0, 1fr) 74px 96px minmax(140px, 210px);
   align-items: center;
-  gap: var(--s4);
+  gap: var(--s3);
   padding: var(--s3) var(--s4);
   cursor: pointer;
   border-bottom: 1px solid var(--rule);
+  border-left: 2px solid transparent;
   transition: background var(--motion);
 }
 
 .trow:hover {
   background: var(--raise);
+}
+
+.trow[aria-selected='true'] {
+  background: var(--raise);
+  border-left-color: var(--tether);
 }
 
 .col-file {
@@ -432,6 +431,69 @@ body {
   background: rgba(229, 169, 60, 0.14);
 }
 
+/* ── Detail: the file, previewed beside its row ────────────────────────── */
+
+.detail {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  min-width: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border-bottom: 1px solid var(--rule);
+  min-height: 46px;
+}
+
+.detail-ident {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-name {
+  color: var(--bone);
+  font-size: var(--t-12);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-name:empty::before {
+  content: 'No file selected';
+  color: var(--dimmer);
+  font-family: var(--ui);
+}
+
+.detail-ident .tether {
+  margin-top: 3px;
+  max-width: 260px;
+}
+
+/* The render stage. The file gets the only light surface on screen. */
+.detail-stage {
+  min-height: 0;
+  background: var(--void);
+  padding: var(--s3);
+  display: flex;
+}
+
+.detail-paper {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  border-radius: 3px;
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+
 /* ── Empty states are real screens ─────────────────────────────────────── */
 
 .empty {
@@ -445,24 +507,8 @@ body {
 }
 
 .empty .mark {
-  width: 34px;
-  height: 34px;
-  opacity: 0.5;
+  opacity: 0.55;
   margin-bottom: var(--s2);
-}
-
-.empty .mark::before {
-  width: 34px;
-  height: 21px;
-  border-width: 2.5px;
-  border-radius: 0 0 11px 11px;
-}
-
-.empty .mark::after {
-  left: 12px;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
 }
 
 .empty h2 {

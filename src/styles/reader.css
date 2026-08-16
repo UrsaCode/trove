@@ -17,6 +17,24 @@ body {
   height: 100vh;
 }
 
+/*
+ * Full screen: the file, and nothing else. Every band is gone, the stage
+ * loses its padding and shadow, and the document occupies the whole viewport.
+ */
+body.full-screen .band,
+body.full-screen .savebar {
+  display: none;
+}
+
+body.full-screen .stage {
+  padding: 0;
+}
+
+body.full-screen .paper {
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* ── Bands ─────────────────────────────────────────────────────────────── */
 
 .band {

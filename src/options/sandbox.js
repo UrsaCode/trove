@@ -95,3 +95,16 @@ window.addEventListener('message', (event) => {
 })
 
 showMessage('Select a file to preview it.')
+
+/*
+ * Announce readiness. The host queues render requests until this arrives -
+ * without it, a request that beats this script's execution is dropped and the
+ * preview stays on the placeholder above.
+ */
+function announceReady() {
+  parent?.postMessage({ channel: 'cfv-preview', ready: true }, '*')
+}
+
+announceReady()
+// A bfcache restore re-runs no script, but pageshow still fires.
+window.addEventListener('pageshow', announceReady)

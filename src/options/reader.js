@@ -18,6 +18,13 @@ const el = (id) => document.getElementById(id)
 const params = new URLSearchParams(location.search)
 const fileKey = params.get('f')
 
+/**
+ * Full screen is the file and nothing else: no bands, no controls, no
+ * lineage. PAPER IS SACRED taken to its conclusion - at this point the
+ * extension is not framing the document, it is getting out of its way.
+ */
+const fullScreen = params.get('full_screen') === 'true'
+
 const state = { file: null, mode: 'render', dirty: false, wrap: true }
 let editor = null
 
@@ -124,6 +131,19 @@ function paintDirty() {
 
 async function load() {
   const file = await getFile(fileKey)
+
+  if (fullScreen) {
+    document.body.classList.add('full-screen')
+    if (!file) {
+      document.title = 'File not found — Trove'
+      return
+    }
+    state.file = file
+    document.title = file.name
+    await renderInSandbox(el('paper'), file)
+    return
+  }
+
   if (!file) {
     el('name-text').textContent = 'File not found'
     el('stage').textContent = ''

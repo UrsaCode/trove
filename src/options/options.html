@@ -12,7 +12,15 @@
       <!-- Rail. Conversations, because that is how you remember a file. -->
       <aside class="rail">
         <div class="rail-head">
-          <span class="mark" aria-hidden="true"></span>
+          <svg class="mark" viewBox="0 0 32 32" width="18" height="18" fill="none" aria-hidden="true">
+            <path
+              d="M6 13v6.5A6.5 6.5 0 0 0 12.5 26h7A6.5 6.5 0 0 0 26 19.5V13"
+              stroke="currentColor"
+              stroke-width="2.8"
+              stroke-linecap="round"
+            />
+            <rect x="12.5" y="4" width="7" height="7" rx="1.6" fill="var(--tether)" />
+          </svg>
           <span class="wordmark">Trove</span>
         </div>
 
@@ -53,14 +61,39 @@
           </div>
         </div>
 
-        <div class="table" id="table">
-          <div class="thead">
-            <div class="col-file eyebrow">File</div>
-            <div class="col-size eyebrow">Size</div>
-            <div class="col-when eyebrow">Captured</div>
-            <div class="col-src eyebrow">Source</div>
+        <div class="split" id="split">
+          <div class="table" id="table">
+            <div class="thead">
+              <div class="col-file eyebrow">File</div>
+              <div class="col-size eyebrow">Size</div>
+              <div class="col-when eyebrow">Captured</div>
+              <div class="col-src eyebrow">Source</div>
+            </div>
+            <div class="tbody" id="rows"></div>
           </div>
-          <div class="tbody" id="rows"></div>
+
+          <!-- Preview. Controls sit in the band above; nothing overlays the file. -->
+          <aside class="detail" id="detail">
+            <header class="detail-head">
+              <div class="detail-ident">
+                <div class="detail-name mono" id="detail-name"></div>
+                <div class="tether" id="detail-tether">
+                  <span class="node"></span><span class="wire"></span><span class="lbl"></span>
+                </div>
+              </div>
+              <button class="btn" id="full-screen" disabled>Full screen</button>
+              <button class="btn" id="open-reader" disabled>Open</button>
+            </header>
+            <div class="detail-stage">
+              <iframe
+                id="preview"
+                class="detail-paper"
+                title="File preview"
+                src="sandbox.html"
+                sandbox="allow-scripts allow-forms allow-modals allow-popups"
+              ></iframe>
+            </div>
+          </aside>
         </div>
       </main>
     </div>

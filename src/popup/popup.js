@@ -11,6 +11,7 @@ import { listFiles, listConversations, contentSize } from '../lib/db.js'
 import { diffConversation, STATES } from '../lib/diff.js'
 import { getSettings, setSetting } from '../lib/settings.js'
 import { conversationIdFromUrl } from '../lib/signal.js'
+import { mark } from '../ui/mark.js'
 
 const el = (id) => document.getElementById(id)
 const FRESH_MS = 5 * 60 * 1000
@@ -40,14 +41,12 @@ function message(heading, body, action) {
   const wrap = document.createElement('div')
   wrap.className = 'message'
 
-  const mark = document.createElement('span')
-  mark.className = 'mark'
   const strong = document.createElement('strong')
   strong.textContent = heading
   const span = document.createElement('span')
   span.textContent = body
 
-  wrap.append(mark, strong, span)
+  wrap.append(mark(30), strong, span)
   if (action) wrap.appendChild(action)
   el('list').appendChild(wrap)
 }

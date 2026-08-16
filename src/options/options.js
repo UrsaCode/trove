@@ -18,9 +18,11 @@ import { fileCategory } from '../lib/paths.js'
 import { MSG } from '../lib/messages.js'
 import { confirmDeleteConversation } from '../ui/dialog.js'
 import { exportConversation } from './export.js'
+import { renderInSandbox } from './preview.js'
+import { mark } from '../ui/mark.js'
 
 const el = (id) => document.getElementById(id)
-const state = { convId: null, filter: 'all', query: '' }
+const state = { convId: null, filter: 'all', query: '', selected: null }
 
 /** Object URLs for row thumbnails, revoked whenever the table is rebuilt. */
 let thumbUrls = []
@@ -277,17 +279,73 @@ async function renderTable() {
     }
 
     row.append(fileCell, size, when, source)
-    row.addEventListener('click', () => open(file))
+    row.setAttribute('aria-selected', String(file.id === state.selected?.id))
+    row.addEventListener('click', () => select(file))
+    row.addEventListener('dblclick', () => open(file))
     body.appendChild(row)
   }
+
+  // Keep a selection alive across re-renders; otherwise the preview would
+  // blank every time the table refreshes on window focus.
+  const stillHere = rows.find((f) => f.id === state.selected?.id)
+  if (stillHere) state.selected = stillHere
+  else if (state.selected) clearSelection()
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────
+
+function paintDetailTether(file) {
+  const wrap = el('detail-tether')
+  const label = wrap.querySelector('.lbl')
+  wrap.removeAttribute('data-state')
+
+  if (!file) {
+    label.textContent = ''
+    return
+  }
+  if (isGone(file)) {
+    wrap.dataset.state = 'gone'
+    label.textContent = 'no longer in the conversation'
+  } else if (hasMoved(file)) {
+    wrap.dataset.state = 'moved'
+    label.textContent = 'newer version in the conversation'
+  } else if (file.edited) {
+    label.textContent = 'edited locally'
+  } else {
+    label.textContent = `tethered to ${file.conversation?.title ?? 'its conversation'}`
+  }
+}
+
+async function select(file) {
+  state.selected = file
+  el('detail-name').textContent = file.name
+  el('full-screen').disabled = false
+  el('open-reader').disabled = false
+  paintDetailTether(file)
+
+  for (const row of el('rows').querySelectorAll('.trow')) {
+    row.setAttribute('aria-selected', 'false')
+  }
+  const index = [...el('rows').querySelectorAll('.trow')].findIndex((r) =>
+    r.querySelector('.file-name')?.textContent === file.name,
+  )
+  if (index >= 0) el('rows').querySelectorAll('.trow')[index].setAttribute('aria-selected', 'true')
+
+  await renderInSandbox(el('preview'), file)
+}
+
+function clearSelection() {
+  state.selected = null
+  el('detail-name').textContent = ''
+  el('full-screen').disabled = true
+  el('open-reader').disabled = true
+  paintDetailTether(null)
+  renderInSandbox(el('preview'), null)
 }
 
 function emptyState() {
   const wrap = document.createElement('div')
   wrap.className = 'empty'
-
-  const mark = document.createElement('span')
-  mark.className = 'mark'
 
   const heading = document.createElement('h2')
   const body = document.createElement('p')
@@ -301,14 +359,26 @@ function emptyState() {
       'Next time Claude writes a file in a conversation, Trove catches it and it shows up here.'
   }
 
-  wrap.append(mark, heading, body)
+  wrap.append(mark(34), heading, body)
   return wrap
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────
 
+/** The Reader: the file with its bands, where editing and re-pulling live. */
 function open(file) {
-  chrome.tabs.create({ url: chrome.runtime.getURL(`options/reader.html?f=${encodeURIComponent(file.id)}`) })
+  chrome.tabs.create({
+    url: chrome.runtime.getURL(`options/reader.html?f=${encodeURIComponent(file.id)}`),
+  })
+}
+
+/** Full screen: the file alone, with nothing of the extension around it. */
+function openFullScreen(file) {
+  chrome.tabs.create({
+    url: chrome.runtime.getURL(
+      `options/reader.html?f=${encodeURIComponent(file.id)}&full_screen=true`,
+    ),
+  })
 }
 
 async function removeConversation(convId) {
@@ -371,6 +441,14 @@ async function render() {
 el('all-files').addEventListener('click', () => {
   state.convId = null
   render()
+})
+
+el('full-screen').addEventListener('click', () => {
+  if (state.selected) openFullScreen(state.selected)
+})
+
+el('open-reader').addEventListener('click', () => {
+  if (state.selected) open(state.selected)
 })
 
 el('search').addEventListener('input', (event) => {
