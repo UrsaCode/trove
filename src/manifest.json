@@ -3,6 +3,7 @@
   "name": "Trove",
   "version": "0.2.0",
   "description": "Files Claude wrote, kept. Capture, read, edit and re-pull the files from a conversation.",
+  "homepage_url": "https://ursacode.github.io/trove/",
 
   "permissions": ["storage", "unlimitedStorage", "tabs"],
   "host_permissions": ["https://claude.ai/*"],

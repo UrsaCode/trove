@@ -315,7 +315,7 @@ body {
 .thead,
 .trow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 66px 84px minmax(196px, 232px);
+  grid-template-columns: minmax(0, 1fr) 66px 84px minmax(196px, 232px) 82px;
   align-items: center;
   gap: var(--s3);
   padding: 0 var(--s4);
@@ -349,7 +349,7 @@ body {
   width: 100%;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 66px 84px minmax(196px, 232px);
+  grid-template-columns: minmax(0, 1fr) 66px 84px minmax(196px, 232px) 82px;
   align-items: center;
   gap: var(--s3);
   padding: var(--s3) var(--s4);
@@ -469,6 +469,52 @@ body {
 
 .repull-chip:hover {
   background: rgba(229, 169, 60, 0.14);
+}
+
+/* ── Row actions ───────────────────────────────────────────────────────── */
+
+/*
+ * Preview, rename and delete, on the row itself.
+ *
+ * All three were already possible - click, double-click, and the Reader - but
+ * only the first was discoverable. Quiet until the row is approached, so a long
+ * list stays a list rather than a wall of buttons.
+ */
+.col-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.row-act {
+  all: unset;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  color: var(--dimmer);
+  opacity: 0;
+  transition: opacity var(--motion), background var(--motion), color var(--motion);
+}
+
+.trow:hover .row-act,
+.trow[aria-selected='true'] .row-act,
+.row-act:focus-visible {
+  opacity: 1;
+}
+
+.row-act:hover {
+  background: var(--raise2);
+  color: var(--bone);
+}
+
+.row-act[data-act='delete']:hover {
+  background: rgba(224, 102, 78, 0.14);
+  color: var(--sever);
 }
 
 /* ── Detail: the file, previewed beside its row ────────────────────────── */

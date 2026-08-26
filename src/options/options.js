@@ -17,14 +17,14 @@ import {
 import { fileCategory } from '../lib/paths.js'
 import { isLocal } from '../lib/diff.js'
 import { MSG } from '../lib/messages.js'
-import { confirmDeleteConversation } from '../ui/dialog.js'
+import { confirmDeleteConversation, confirmDeleteFile } from '../ui/dialog.js'
 import { exportConversation } from './export.js'
 import { renderInSandbox } from './preview.js'
 import { mark } from '../ui/mark.js'
 import { fileIcon } from '../ui/file-icon.js'
 import { displayName, displayTitle, isRenamed, normaliseName } from '../lib/naming.js'
 import { getSettings, setSetting, resetSettings, DEFAULTS } from '../lib/settings.js'
-import { putFile, getFile } from '../lib/db.js'
+import { putFile, getFile, deleteFile } from '../lib/db.js'
 
 const el = (id) => document.getElementById(id)
 const state = { convId: null, filter: 'all', query: '', selected: null }
@@ -189,6 +189,68 @@ async function renameFile(file, renamedTo) {
   await putFile({ ...stored, renamedTo, updatedAt: Date.now() })
   await render()
   if (state.selected?.id === file.id) el('detail-name').textContent = renamedTo || stored.name
+}
+
+const NS = 'http://www.w3.org/2000/svg'
+
+const ACTION_ICONS = {
+  // An eye: look at it.
+  preview: ['M1.5 8s2.4-4.2 6.5-4.2S14.5 8 14.5 8s-2.4 4.2-6.5 4.2S1.5 8 1.5 8Z', 'M8 6.2a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6Z'],
+  // A pencil: change what it is called.
+  rename: ['M11.1 2.6l2.3 2.3-7.1 7.1-3 .7.7-3 7.1-7.1Z'],
+  // A bin: remove it.
+  delete: ['M3 5.2h10', 'M6.4 5.2V3.6h3.2v1.6', 'M4.4 5.2l.6 8h6l.6-8'],
+}
+
+function actionButton(kind, title, onClick) {
+  const button = document.createElement('button')
+  button.className = 'row-act'
+  button.dataset.act = kind
+  button.title = title
+  button.setAttribute('aria-label', title)
+
+  const svg = document.createElementNS(NS, 'svg')
+  svg.setAttribute('viewBox', '0 0 16 16')
+  svg.setAttribute('width', '14')
+  svg.setAttribute('height', '14')
+  svg.setAttribute('fill', 'none')
+  svg.setAttribute('stroke', 'currentColor')
+  svg.setAttribute('stroke-width', '1.3')
+  svg.setAttribute('stroke-linecap', 'round')
+  svg.setAttribute('stroke-linejoin', 'round')
+  for (const d of ACTION_ICONS[kind]) {
+    const path = document.createElementNS(NS, 'path')
+    path.setAttribute('d', d)
+    svg.appendChild(path)
+  }
+  button.appendChild(svg)
+
+  button.addEventListener('click', (event) => {
+    // The row is itself a button; without this the click selects as well.
+    event.stopPropagation()
+    onClick()
+  })
+  return button
+}
+
+/** Delete one file, and keep its conversation's counts honest. */
+async function removeFile(file) {
+  if (settings.confirmDelete && !(await confirmDeleteFile(displayName(file)))) return
+
+  await deleteFile(file.id)
+  const [conversation, remaining] = await Promise.all([
+    getConversation(file.convId),
+    listFiles(file.convId),
+  ])
+  if (conversation) {
+    await putConversation({
+      ...conversation,
+      fileCount: remaining.length,
+      bytes: remaining.reduce((n, f) => n + contentSize(f.content), 0),
+    })
+  }
+  if (state.selected?.id === file.id) clearSelection()
+  await render()
 }
 
 // ── Rail ──────────────────────────────────────────────────────────────────
@@ -387,7 +449,21 @@ async function renderTable() {
       source.appendChild(chip)
     }
 
-    row.append(fileCell, size, when, source)
+    const actions = document.createElement('div')
+    actions.className = 'col-actions'
+    actions.append(
+      actionButton('preview', `Preview ${displayName(file)}`, () => select(file)),
+      actionButton('rename', `Rename ${displayName(file)}`, () =>
+        editableLabel(name, {
+          current: displayName(file),
+          original: file.name,
+          onCommit: (renamedTo) => renameFile(file, renamedTo),
+        }),
+      ),
+      actionButton('delete', `Delete ${displayName(file)}`, () => removeFile(file)),
+    )
+
+    row.append(fileCell, size, when, source, actions)
     row.setAttribute('aria-selected', String(file.id === state.selected?.id))
     row.addEventListener('click', () => {
       if (settings.openOnClick === 'reader') open(file)

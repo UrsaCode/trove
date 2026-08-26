@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trove — privacy</title>
+    <meta
+      name="description"
+      content="Trove has no server, no account and no analytics. Everything it keeps stays in your browser."
+    />
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles/site.css" />
+    <style>
+      /* A document, not a landing page: one column, generous measure. */
+      .doc {
+        max-width: 68ch;
+        padding: clamp(40px, 8vh, 88px) 0;
+      }
+      .doc h1 {
+        margin: 12px 0 0;
+        font: 700 clamp(30px, 4vw, 46px) / 1.1 var(--ui);
+        letter-spacing: -0.025em;
+      }
+      .doc h2 {
+        margin: 44px 0 0;
+        font: 600 19px/1.3 var(--ui);
+        max-width: none;
+      }
+      .doc p,
+      .doc li {
+        color: var(--dim);
+        font-size: 16px;
+        line-height: 1.7;
+      }
+      .doc ul {
+        padding-left: 1.2em;
+      }
+      .doc li {
+        margin-bottom: 8px;
+      }
+      .doc strong {
+        color: var(--bone);
+        font-weight: 600;
+      }
+      .updated {
+        margin-top: 8px;
+        font: 400 12px/1 var(--mono);
+        color: var(--dimmer);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav">
+      <a class="brand" href="./">
+        <svg viewBox="0 0 32 32" width="20" height="20" fill="none" aria-hidden="true">
+          <path
+            d="M6 13v6.5A6.5 6.5 0 0 0 12.5 26h7A6.5 6.5 0 0 0 26 19.5V13"
+            stroke="currentColor"
+            stroke-width="2.8"
+            stroke-linecap="round"
+          />
+          <rect x="12.5" y="4" width="7" height="7" rx="1.6" fill="#5FD3BC" />
+        </svg>
+        Trove
+      </a>
+      <span class="spacer"></span>
+      <a class="link" href="./">Home</a>
+      <a class="btn" href="https://github.com/UrsaCode/trove">GitHub</a>
+    </nav>
+
+    <main class="wrap doc">
+      <p class="eyebrow">Privacy</p>
+      <h1>There is nowhere for your files to go.</h1>
+      <p class="updated">Last updated 26 August 2026</p>
+
+      <h2>The short version</h2>
+      <p>
+        Trove has no server, no account and no analytics. It does not collect,
+        transmit, sell or share anything. Every file it keeps stays in your
+        browser's own storage on your machine.
+      </p>
+
+      <h2>What Trove reads</h2>
+      <p>
+        When you are looking at a conversation on <strong>claude.ai</strong> and
+        you ask Trove to keep a file, it reads two things from that site using
+        the session you are already signed in with:
+      </p>
+      <ul>
+        <li>The list of files the conversation produced, with each file's size and timestamp</li>
+        <li>The contents of the files you chose to keep</li>
+      </ul>
+      <p>
+        It also reads the address of your current tab, and only to work out which
+        conversation you are viewing. No browsing history is read or kept.
+      </p>
+
+      <h2>What Trove stores, and where</h2>
+      <p>
+        Captured files, the conversation titles they belong to, and any edits or
+        names you give them are written to the extension's own
+        <strong>IndexedDB</strong> storage, which lives on your computer and is
+        readable only by Trove. Your settings are stored in Chrome's extension
+        settings storage, which Chrome may sync between your own signed-in
+        browsers — that is Chrome's sync, not ours, and it carries preferences
+        only, never file contents.
+      </p>
+
+      <h2>What Trove sends</h2>
+      <p>
+        <strong>Nothing.</strong> The only network requests Trove makes are to
+        <strong>claude.ai</strong>, to fetch the files described above. There is
+        no other host, no telemetry, no crash reporting and no usage
+        measurement.
+      </p>
+      <p>
+        Files leave your browser only when you explicitly ask: saving a copy, a
+        screenshot, or exporting a conversation writes a file to the location you
+        choose. Edits you make in Trove are saved locally and never sent back to
+        the conversation.
+      </p>
+
+      <h2>Screenshots</h2>
+      <p>
+        Taking a screenshot asks Chrome for permission to capture the visible
+        tab, the first time only. Trove captures nothing but its own reader page,
+        and the resulting image is either saved where you choose, put on your
+        clipboard, or kept in your local library — whichever you pick.
+      </p>
+
+      <h2>Deleting your data</h2>
+      <p>
+        Deleting a file or a conversation in Trove removes it from storage
+        immediately, and there is no version history holding a copy behind it.
+        Removing the extension from Chrome deletes everything it kept.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        Trove is a developer tool and is not directed at children under 13.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        If this ever changes, the change will appear in this page and in the
+        repository's history, which is public. The date above says when it was
+        last revised.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about privacy, or a suspected security problem, go to
+        <strong>security@ursacode.com</strong>. Anything else belongs in
+        <a href="https://github.com/UrsaCode/trove/issues">the issue tracker</a>.
+      </p>
+
+      <h2>Independence</h2>
+      <p>
+        Trove is an independent, MIT-licensed project by UrsaCode. It is not
+        affiliated with, endorsed by, or sponsored by Anthropic.
+      </p>
+    </main>
+
+    <footer>
+      <div class="wrap row">
+        <span>Trove — a <a href="https://ursacode.com">UrsaCode</a> project</span>
+        <span class="spacer"></span>
+        <a href="./">Home</a>
+        <a href="https://github.com/UrsaCode/trove">Source</a>
+        <a href="https://github.com/UrsaCode/trove/blob/main/LICENSE">MIT</a>
+      </div>
+    </footer>
+  </body>
+</html>

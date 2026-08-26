@@ -10,7 +10,7 @@ A Chrome extension that turns the files Claude generates in a conversation into
 a local library you own — browse them, read them, edit them, and pull them
 again when the conversation moves on.
 
-[Install](#install) · [How it works](#how-it-works) · [Privacy](#privacy) · [Contributing](CONTRIBUTING.md)
+[Site](https://ursacode.github.io/trove/) · [Install](#install) · [How it works](#how-it-works) · [Privacy](#privacy) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -180,8 +180,9 @@ thin.
 | `content/capture.js` | Which files to fetch, and what a record carries |
 | `background/router.js` | Message routing, the auto-capture gate, debounce |
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) to get started, and
-[docs/architecture.md](docs/architecture.md) for how the pieces fit.
+See [CONTRIBUTING.md](CONTRIBUTING.md) to get started,
+[docs/architecture.md](docs/architecture.md) for how the pieces fit, and
+[docs/chrome-web-store.md](docs/chrome-web-store.md) for what publishing needs.
 
 ## Licence
 
