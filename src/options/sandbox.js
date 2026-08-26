@@ -64,13 +64,62 @@ function showText(text) {
   root.appendChild(frame)
 }
 
+/**
+ * The rendered document's own scroll geometry.
+ *
+ * The nested frame is a srcdoc of this page, so it shares this opaque origin
+ * and can be measured. The host cannot reach it - that is the whole point of
+ * the sandbox - so full-page capture has to be driven from in here.
+ */
+function scrollMetrics() {
+  const frame = document.getElementById('frame')
+  const doc = frame?.contentDocument
+  const image = document.getElementById('image')
+
+  if (doc?.documentElement) {
+    const el = doc.scrollingElement ?? doc.documentElement
+    return {
+      scrollHeight: Math.max(el.scrollHeight, doc.body?.scrollHeight ?? 0),
+      clientHeight: el.clientHeight || frame.clientHeight,
+      scrollTop: el.scrollTop,
+      scrollable: true,
+    }
+  }
+  if (image) {
+    // A bare image never scrolls; one capture is the whole thing.
+    return { scrollHeight: image.clientHeight, clientHeight: image.clientHeight, scrollTop: 0, scrollable: false }
+  }
+  return { scrollHeight: 0, clientHeight: 0, scrollTop: 0, scrollable: false }
+}
+
+function scrollTo(y) {
+  const doc = document.getElementById('frame')?.contentDocument
+  const el = doc?.scrollingElement ?? doc?.documentElement
+  if (!el) return { scrollTop: 0 }
+  el.scrollTop = y
+  return { scrollTop: el.scrollTop }
+}
+
 window.addEventListener('message', (event) => {
   const data = event.data
   // Only ever act on the message shape we defined. Nothing here trusts the
   // parent beyond that, and nothing is executed as code.
   if (!data || data.channel !== 'cfv-preview') return
 
+  const reply = (extra = {}) =>
+    event.source?.postMessage({ channel: 'cfv-preview', ack: true, id: data.id, ...extra }, '*')
+
   try {
+    // Measurement and scrolling answer with data rather than repainting.
+    if (data.render === 'metrics') {
+      reply({ metrics: scrollMetrics() })
+      return
+    }
+    if (data.render === 'scroll') {
+      reply({ scrolled: scrollTo(Number(data.y) || 0) })
+      return
+    }
+
     switch (data.render) {
       case 'markup':
         showMarkup(String(data.content ?? ''))
@@ -87,10 +136,10 @@ window.addEventListener('message', (event) => {
       default:
         showMessage('This file type cannot be previewed. Open the Code tab to read it.')
     }
-    event.source?.postMessage({ channel: 'cfv-preview', ack: true }, '*')
+    reply()
   } catch (error) {
     showMessage(`Preview failed: ${error.message}`)
-    event.source?.postMessage({ channel: 'cfv-preview', ack: true, error: error.message }, '*')
+    reply({ error: error.message })
   }
 })
 

@@ -385,7 +385,8 @@ function beginRename() {
  */
 async function screenshot() {
   const base = displayName(state.file).replace(/\.[^.]+$/, '') || 'file'
-  await openScreenshotModal({ suggestedName: base })
+  // The frame is what full-page capture scrolls, so it has to be handed over.
+  await openScreenshotModal({ suggestedName: base, frame: el('paper') })
 }
 
 function goFullScreen() {
@@ -400,22 +401,20 @@ function exitFullScreen() {
   location.href = url.toString()
 }
 
-/** In full screen the controls arrive only when the pointer comes looking. */
+/**
+ * Full screen's only affordance.
+ *
+ * It used to fade in on approach and hide itself again after a couple of
+ * seconds, which made it unreliable: it was gone after taking a screenshot,
+ * gone after a reload, and gone again a moment after being found. A control you
+ * cannot count on being there is worse than one that is always visible.
+ *
+ * So it stays, dimmed to keep out of the document's way, and comes up to full
+ * strength on hover or keyboard focus.
+ */
 function mountHatch() {
   const hatch = el('hatch')
-  let hideTimer = null
-
-  const show = () => {
-    hatch.classList.remove('hidden')
-    clearTimeout(hideTimer)
-    hideTimer = setTimeout(() => hatch.classList.add('hidden'), 2200)
-  }
-
-  window.addEventListener('mousemove', (event) => {
-    if (event.clientY < 90) show()
-  })
-  hatch.addEventListener('mouseenter', () => clearTimeout(hideTimer))
-  hatch.addEventListener('mouseleave', show)
+  hatch.classList.remove('hidden')
 
   el('hatch-shot').addEventListener('click', screenshot)
   el('hatch-exit').addEventListener('click', exitFullScreen)

@@ -18,6 +18,7 @@ import {
   copyBlob,
   hasCapturePermission,
   requestCapturePermission,
+  captureFullPage,
 } from './screenshot.js'
 
 let styled = false
@@ -50,7 +51,8 @@ function ensureStyles() {
       padding: var(--s4);
       border-bottom: 1px solid var(--rule);
     }
-    .shot-head .eyebrow { flex: 1 }
+    .shot-head .eyebrow { flex: 0 0 auto }
+    .shot-head .shot-scope { flex: 1 }
     .shot-body {
       min-height: 0;
       padding: var(--s4);
@@ -124,7 +126,13 @@ function ensureStyles() {
  * @param {string} options.suggestedName  filename without extension
  * @returns {Promise<void>} resolves when the modal closes
  */
-export function openScreenshotModal({ suggestedName = 'screenshot' } = {}) {
+/**
+ * @param {object} options
+ * @param {string} options.suggestedName  filename without extension
+ * @param {HTMLIFrameElement} [options.frame] the sandbox frame, needed for
+ *   full-page capture - without it only the visible area can be taken
+ */
+export function openScreenshotModal({ suggestedName = 'screenshot', frame = null } = {}) {
   ensureStyles()
 
   return new Promise((resolve) => {
@@ -143,6 +151,32 @@ export function openScreenshotModal({ suggestedName = 'screenshot' } = {}) {
     const eyebrow = document.createElement('span')
     eyebrow.className = 'eyebrow'
     eyebrow.textContent = 'Screenshot'
+    // Visible or the whole document. Full page needs the frame to scroll.
+    const scope = document.createElement('div')
+    scope.className = 'seg shot-scope'
+    let mode = 'visible'
+    const scopeButtons = {}
+    for (const [value, label] of [
+      ['visible', 'Visible'],
+      ['full', 'Full page'],
+    ]) {
+      const button = document.createElement('button')
+      button.textContent = label
+      button.setAttribute('aria-selected', String(value === mode))
+      button.disabled = value === 'full' && !frame
+      if (button.disabled) button.title = 'Full page needs a rendered document'
+      button.addEventListener('click', () => {
+        if (mode === value) return
+        mode = value
+        for (const [key, node] of Object.entries(scopeButtons)) {
+          node.setAttribute('aria-selected', String(key === mode))
+        }
+        take()
+      })
+      scopeButtons[value] = button
+      scope.appendChild(button)
+    }
+
     const retake = document.createElement('button')
     retake.className = 'btn'
     retake.textContent = 'Retake'
@@ -150,7 +184,7 @@ export function openScreenshotModal({ suggestedName = 'screenshot' } = {}) {
     close.className = 'btn btn-ghost'
     close.textContent = '×'
     close.setAttribute('aria-label', 'Close')
-    head.append(eyebrow, retake, close)
+    head.append(eyebrow, scope, retake, close)
 
     // Body
     const body = document.createElement('div')
@@ -242,7 +276,13 @@ export function openScreenshotModal({ suggestedName = 'screenshot' } = {}) {
       setBusy(true)
 
       try {
-        const dataUrl = await captureTab()
+        const dataUrl =
+          mode === 'full' && frame
+            ? await captureFullPage(frame, (done, total) => {
+                pending.textContent =
+                  total > 1 ? `Capturing ${done} of ${total}…` : 'Capturing…'
+              })
+            : await captureTab()
         blob = await dataUrlToBlob(dataUrl)
 
         body.textContent = ''

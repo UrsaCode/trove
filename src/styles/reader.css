@@ -339,7 +339,14 @@ body.full-screen .paper {
   background: rgba(14, 16, 20, 0.86);
   border: 1px solid var(--rule);
   backdrop-filter: blur(6px);
+  /* Present but quiet, rather than hiding itself and becoming unreliable. */
+  opacity: 0.42;
   transition: opacity var(--motion);
+}
+
+.escape-hatch:hover,
+.escape-hatch:focus-within {
+  opacity: 1;
 }
 
 body:not(.full-screen) .escape-hatch {

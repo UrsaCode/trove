@@ -57,24 +57,43 @@ function whenReady(frame) {
   })
 }
 
-async function post(frame, message) {
-  // Recorded before the wait, so a ready that arrives mid-wait replays it.
-  lastSent.set(frame, message)
+let nextId = 1
+
+async function post(frame, message, { replay = true, timeoutMs = 4000 } = {}) {
+  // Only a render is worth replaying on a later ready. Replaying a measurement
+  // would answer a question nobody is still asking.
+  if (replay) lastSent.set(frame, message)
   await whenReady(frame)
+
+  const id = nextId++
 
   return new Promise((resolve) => {
     function onAck(event) {
       if (event.data?.channel !== CHANNEL || !event.data.ack) return
+      // Ids keep a measurement reply from being read as an answer to a render.
+      if (event.data.id !== undefined && event.data.id !== id) return
       window.removeEventListener('message', onAck)
       resolve(event.data)
     }
     window.addEventListener('message', onAck)
-    frame.contentWindow?.postMessage({ channel: CHANNEL, ...message }, '*')
+    frame.contentWindow?.postMessage({ channel: CHANNEL, id, ...message }, '*')
     setTimeout(() => {
       window.removeEventListener('message', onAck)
       resolve({ timedOut: true })
-    }, 4000)
+    }, timeoutMs)
   })
+}
+
+/** How tall the rendered document is, and how much of it fits at once. */
+export async function measureDocument(frame) {
+  const reply = await post(frame, { render: 'metrics' }, { replay: false, timeoutMs: 2000 })
+  return reply?.metrics ?? { scrollHeight: 0, clientHeight: 0, scrollTop: 0, scrollable: false }
+}
+
+/** Scroll the rendered document, and report where it actually landed. */
+export async function scrollDocument(frame, y) {
+  const reply = await post(frame, { render: 'scroll', y }, { replay: false, timeoutMs: 2000 })
+  return reply?.scrolled?.scrollTop ?? 0
 }
 
 export function decideRender(file) {

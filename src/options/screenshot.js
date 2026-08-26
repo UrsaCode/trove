@@ -11,6 +11,7 @@
  */
 
 import { MSG } from '../lib/messages.js'
+import { planSlices, planDraws } from '../lib/stitch-plan.js'
 
 /**
  * Give the browser a frame to paint the hidden chrome before capturing.
@@ -106,4 +107,95 @@ export function saveBlob(blob, filename) {
 export async function copyBlob(blob) {
   if (!navigator.clipboard?.write) throw new Error('This browser cannot copy images')
   await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+}
+
+/**
+ * Capture the whole document, not just what fits.
+ *
+ * captureVisibleTab only ever returns the viewport, and the rendered file lives
+ * in a sandboxed frame whose pixels this page cannot read. So the document is
+ * scrolled a viewport at a time from inside the sandbox, each view is captured,
+ * and the slices are stitched onto a canvas here.
+ *
+ * The seam is handled by drawing each slice at its real scroll offset and
+ * clipping the last one: the final scroll position usually overlaps the one
+ * before it, because a document rarely divides evenly into viewports.
+ *
+ * @param {HTMLIFrameElement} frame the sandbox frame
+ * @param {(done: number, total: number) => void} [onProgress]
+ * @returns {Promise<string>} a PNG data URL of the entire document
+ */
+export async function captureFullPage(frame, onProgress) {
+  const { measureDocument, scrollDocument } = await import('./preview.js')
+
+  const metrics = await measureDocument(frame)
+  const viewport = Math.max(1, Math.round(metrics.clientHeight))
+  const total = Math.max(viewport, Math.round(metrics.scrollHeight))
+
+  // Nothing to stitch: one capture is already the whole document.
+  if (!metrics.scrollable || total <= viewport + 4) {
+    onProgress?.(1, 1)
+    return captureTab()
+  }
+
+  const targets = planSlices(total, viewport)
+  const slices = []
+
+  try {
+    for (const [step, target] of targets.entries()) {
+      // Trust where it landed, not where it was asked to go: a document can
+      // refuse a scroll, and stitching from the request would smear the seam.
+      const landed = await scrollDocument(frame, target)
+      slices.push({ dataUrl: await captureTab(), top: landed })
+      onProgress?.(step + 1, targets.length)
+    }
+  } finally {
+    // Leave the reader where the user had it, not wherever stitching ended.
+    await scrollDocument(frame, metrics.scrollTop)
+  }
+
+  return stitch(slices, { total, viewport })
+}
+
+async function loadImage(src) {
+  const image = new Image()
+  image.src = src
+  await image.decode()
+  return image
+}
+
+async function stitch(slices, { total, viewport }) {
+  const images = await Promise.all(slices.map((slice) => loadImage(slice.dataUrl)))
+  const first = images[0]
+
+  // The capture is in device pixels; the scroll offsets are in CSS pixels.
+  const scale = first.naturalHeight / viewport
+  const canvas = document.createElement('canvas')
+  canvas.width = first.naturalWidth
+  canvas.height = Math.round(total * scale)
+
+  const context = canvas.getContext('2d')
+  const draws = planDraws(
+    slices.map((slice) => slice.top),
+    first.naturalHeight,
+    canvas.height,
+    scale,
+  )
+
+  for (const draw of draws) {
+    const image = images[draw.index]
+    context.drawImage(
+      image,
+      0,
+      draw.sourceY,
+      image.naturalWidth,
+      draw.height,
+      0,
+      draw.destY,
+      image.naturalWidth,
+      draw.height,
+    )
+  }
+
+  return canvas.toDataURL('image/png')
 }
