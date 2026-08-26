@@ -4,3 +4,6 @@ dist/
 
 # Screenshot harness output, regenerated on demand
 docs/shots/*.tmp.*
+
+# Store upload archives
+*.zip

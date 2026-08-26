@@ -15,28 +15,30 @@ declaration, and getting them wrong is a policy problem rather than a typo.
 
 ## Packaging
 
-The upload is a zip of the **contents** of `dist/`, not the folder itself —
-`manifest.json` has to sit at the root of the archive.
+One command:
 
 ```bash
-npm ci
-npm test
-npm run build
-
-cd dist
-zip -r ../trove-0.2.0.zip .
-cd ..
+npm run package
 ```
 
-Every upload needs a **higher** `version` in `src/manifest.json` than the last
-one. Chrome compares numerically, left to right.
+That builds and writes `trove-<version>.zip` in the repository root — the file
+you upload. It refuses to produce an archive that could not be installed: the
+manifest has to parse, `manifest.json` has to sit at the archive **root** rather
+than inside a `dist/` folder, and every icon and sandbox page the manifest names
+has to actually be in the package.
 
-Check before uploading:
+The current archive is **`trove-1.0.0.zip`** — 25 files, 304 KB zipped.
 
-```bash
-unzip -l trove-0.2.0.zip | head        # manifest.json must be at the root
-node -e "JSON.parse(require('fs').readFileSync('dist/manifest.json','utf8'))"
-```
+Every upload after this needs a **higher** `version` in `src/manifest.json`.
+Chrome compares numerically, left to right, so 1.0.1 and 1.1.0 both work and
+1.0 does not go backwards to 1.0.0.
+
+Verified in the built archive, so these are answers rather than assumptions:
+
+- Every path the manifest references resolves, and every stylesheet, script and
+  font each HTML page pulls in is present.
+- No `eval`, no `new Function`, no `importScripts`, and no host contacted other
+  than `claude.ai`.
 
 ## Listing fields
 
