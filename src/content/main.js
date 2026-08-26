@@ -146,10 +146,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         case MSG.LIST_STATUS: {
           const convId = currentConvId()
           if (!convId) return { ok: true, conversation: null, entries: [] }
+          // The caller decides whether a fresh listing is worth the latency.
+          // Straight after a capture it is not: we just listed these files.
           return {
             ok: true,
             conversation: { id: convId, title: conversationTitle() },
-            entries: await entries({ force: true }),
+            entries: await entries({ force: message.force !== false }),
           }
         }
         default:

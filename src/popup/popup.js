@@ -290,21 +290,52 @@ async function captureSelected() {
     else failed++
   }
 
+  /*
+   * Settle the panel before doing anything asynchronous.
+   *
+   * The reload that follows takes about a second, and leaving the old text up
+   * for that second meant the panel still read "Capturing", "keeping 11 of 11"
+   * and "11 of 11 selected" while every row already said Kept. Everything shown
+   * here is known locally, so none of it has to wait for a round trip.
+   */
   setCapturing(false)
   button.disabled = false
+  settleAfterCapture({ done, failed, total: paths.length })
 
   // The conversation's cards were decided before this ran, so tell them to
   // repaint rather than leaving them offering to keep what is already kept.
   await refreshCards()
-  await load()
+  // No force: this just listed every one of these files, so re-listing would
+  // only add latency to a state we already know.
+  await load({ force: false })
 
-  // Say so when part of a batch did not land, rather than letting a silent
-  // reload be the only sign.
+  // A partial failure has to survive the reload, which would otherwise paint
+  // over it with a tidy summary.
   if (failed > 0) {
     el('status').classList.remove('hidden')
     el('status').dataset.state = 'moved'
     el('status-text').textContent = `${failed} failed`
   }
+}
+
+/** The immediate, local truth: what just happened, in the panel's own words. */
+function settleAfterCapture({ done, failed, total }) {
+  const button = el('capture')
+  const label = el('tether').querySelector('.lbl')
+
+  if (failed > 0) {
+    el('tether').dataset.state = 'moved'
+    label.textContent = `${failed} of ${total} could not be kept`
+    button.textContent = `Retry ${failed}`
+    button.classList.remove('hidden')
+  } else {
+    el('tether').removeAttribute('data-state')
+    label.textContent = done === 1 ? 'kept 1 file' : `kept ${done} files`
+    button.classList.add('hidden')
+  }
+
+  // Rows cleared their own ticks as they landed; the bar has to agree.
+  paintSelection()
 }
 
 /**
@@ -318,14 +349,20 @@ async function captureSelected() {
 function setCapturing(on) {
   document.body.classList.toggle('capturing', on)
   const status = el('status')
+
   if (on) {
     status.classList.remove('hidden')
     status.dataset.state = 'capturing'
     el('status-text').textContent = 'Capturing'
     el('tether').dataset.state = 'capturing'
-  } else {
-    el('tether').removeAttribute('data-state')
+    return
   }
+
+  // Both of these were left behind before, so the panel went on saying
+  // "Capturing" with a finished list underneath it.
+  el('tether').removeAttribute('data-state')
+  status.classList.add('hidden')
+  status.removeAttribute('data-state')
 }
 
 function setCapturingProgress(done, total) {
@@ -350,7 +387,7 @@ async function paintKept() {
     : 'Nothing kept yet'
 }
 
-async function load() {
+async function load({ force = true } = {}) {
   await paintKept()
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -373,7 +410,7 @@ async function load() {
 
   let response
   try {
-    response = await chrome.tabs.sendMessage(tabId, { type: MSG.LIST_STATUS })
+    response = await chrome.tabs.sendMessage(tabId, { type: MSG.LIST_STATUS, force })
   } catch {
     message(
       'Reload the conversation',
