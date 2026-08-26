@@ -9,6 +9,8 @@
 | Item ID | `mikpichonjdjbnhjafkjiofacepfpffc` |
 | Listing | https://chromewebstore.google.com/detail/mikpichonjdjbnhjafkjiofacepfpffc |
 | Dashboard | https://chrome.google.com/webstore/devconsole |
+| Release | https://github.com/UrsaCode/trove/releases/tag/v1.0.0 |
+| Uploaded archive | `trove-1.0.0.zip`, sha256 `f01d8756…c9d113` |
 
 The listing URL returns nothing until the item is approved. The item ID is
 permanent: every future version has to be uploaded to *this* item, from the same
@@ -18,9 +20,14 @@ receive.
 ### When it is approved
 
 - Swap the "awaiting review" lines in `README.md` and `docs/index.html` for the
-  live link.
+  live link, then re-run `node tools/check-site.mjs`.
 - Add the listing to the repository's About panel on GitHub.
-- Tag the release: `git tag v1.0.0 && git push origin v1.0.0`.
+- Edit the v1.0.0 release notes to point at the listing instead of the archive.
+
+The v1.0.0 tag and release already exist, and the archive attached to it is
+byte-identical to the one uploaded to the store — same build, same checksum. A
+later version means a new tag, a new release, and a **higher** manifest version
+uploaded to the same item.
 
 ### If it is rejected
 
