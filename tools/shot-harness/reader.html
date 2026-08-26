@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Trove — reader</title>
+    <link rel="stylesheet" href="/src/styles/tokens.css?v=2" />
+    <link rel="stylesheet" href="/src/styles/reader.css?v=2" />
+    <style>
+      html,
+      body {
+        width: 1512px;
+        height: 860px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="reader">
+      <header class="band band-top">
+        <button class="back">&#8249;</button>
+
+        <div class="ident">
+          <div class="name-row">
+            <span class="file-glyph" id="glyph"></span>
+            <span class="name mono">fleet-console.html</span>
+          </div>
+          <div class="tether">
+            <span class="node"></span><span class="wire"></span
+            ><span class="lbl">tethered to Fleet dashboard heartbeat</span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="seg">
+            <button aria-selected="true">Render</button>
+            <button aria-selected="false">Source</button>
+          </div>
+          <button class="btn">Details</button>
+          <button class="btn">Screenshot</button>
+          <button class="btn">Save a copy</button>
+          <button class="btn">Re-pull</button>
+          <button class="btn btn-sever">Delete</button>
+          <button class="btn btn-tether">Full screen</button>
+        </div>
+      </header>
+
+      <main class="stage">
+        <iframe class="paper" id="paper" title="Rendered file"></iframe>
+      </main>
+
+      <footer class="band band-bottom">
+        <div class="lineage mono">
+          Fleet dashboard heartbeat<span class="sep">›</span>msg 27<span class="sep">›</span
+          ><span class="path">/mnt/user-data/outputs/fleet-console.html</span
+          ><span class="sep">·</span>30.6 KB<span class="sep">·</span>captured 26 Aug 18:44
+        </div>
+        <a class="open-conv mono">Open conversation &#8599;</a>
+      </footer>
+    </div>
+
+    <script src="seed.js"></script>
+    <script>
+      document.getElementById('glyph').appendChild(glyph('html', 15))
+      renderPreview(document.getElementById('paper'))
+    </script>
+  </body>
+</html>

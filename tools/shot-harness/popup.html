@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Trove — popup</title>
+    <link rel="stylesheet" href="/src/styles/tokens.css?v=2" />
+    <link rel="stylesheet" href="/src/styles/popup.css?v=2" />
+    <style>
+      /*
+       * The capture size is fixed, so the panel is scaled up and centred to
+       * read as a product shot rather than a small window lost in a big frame.
+       */
+      html {
+        background: #0e1014;
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        width: 100%;
+        min-height: 100%;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(60% 60% at 50% 40%, #171a20 0%, #0e1014 100%);
+      }
+      .frame {
+        width: 360px;
+        transform: scale(1.24);
+        border: 1px solid var(--rule);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+        background: var(--void);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+    <header class="head">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 32 32" width="16" height="16" fill="none" aria-hidden="true">
+          <path
+            d="M6 13v6.5A6.5 6.5 0 0 0 12.5 26h7A6.5 6.5 0 0 0 26 19.5V13"
+            stroke="currentColor"
+            stroke-width="2.8"
+            stroke-linecap="round"
+          />
+          <rect x="12.5" y="4" width="7" height="7" rx="1.6" fill="var(--tether)" />
+        </svg>
+        <span class="wordmark">Trove</span>
+      </div>
+      <span class="pill" data-state="moved"><span class="dot"></span><span>2 newer</span></span>
+    </header>
+
+    <section class="conv">
+      <div class="conv-title">Fleet dashboard heartbeat</div>
+      <div class="conv-line">
+        <div class="tether" data-state="moved">
+          <span class="node"></span><span class="wire"></span
+          ><span class="lbl">2 of 9 moved on</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="selectbar">
+      <label class="check">
+        <input type="checkbox" checked />
+        <span>Select none</span>
+      </label>
+      <span class="selected-count mono">3 of 3 selected</span>
+    </div>
+
+    <div class="list" id="list"></div>
+
+    <footer class="foot">
+      <span class="mono kept">34 kept · 6 conversations</span>
+      <button class="btn">Library</button>
+      <button class="btn btn-tether">Update 3</button>
+    </footer>
+
+    <div class="settings">
+      <label class="toggle">
+        <input type="checkbox" />
+        <span>Catch files as Claude writes them</span>
+      </label>
+    </div>
+
+    </div>
+
+    <script src="seed.js"></script>
+    <script>
+      const ROWS = [
+        { name: 'fleet-thresholds.html', sub: 'newer version', state: 'changed', action: 'Re-pull', checked: true },
+        { name: 'fleet-hosts.html', sub: 'newer version', state: 'changed', action: 'Re-pull', checked: true },
+        { name: 'fleet-relay.html', sub: '11.2 KB · not kept yet', state: 'new', action: 'Keep', checked: true },
+        { name: 'fleet-console.html', sub: '30.6 KB · just now', state: 'unchanged', action: 'Kept', fresh: true },
+        { name: 'fleet-accounts.html', sub: '18.9 KB · 6 min ago', state: 'unchanged', action: 'Kept' },
+        { name: 'entities.csv', sub: '88 KB · 14 min ago', state: 'unchanged', action: 'Kept' },
+      ]
+
+      const list = document.getElementById('list')
+      for (const row of ROWS) {
+        const ext = row.name.split('.').pop()
+        const item = document.createElement('div')
+        item.className = 'item'
+        item.dataset.state = row.state
+        item.dataset.fresh = String(Boolean(row.fresh))
+
+        const box = document.createElement('input')
+        box.type = 'checkbox'
+        box.className = 'row-check'
+        box.checked = Boolean(row.checked)
+        box.disabled = !row.checked
+
+        const icon = document.createElement('span')
+        icon.className = 'item-icon'
+        icon.appendChild(glyph(ext))
+
+        const body = document.createElement('div')
+        body.className = 'item-body'
+        const name = document.createElement('div')
+        name.className = 'item-name'
+        name.textContent = row.name
+        const sub = document.createElement('div')
+        sub.className = 'item-sub'
+        sub.textContent = row.sub
+        if (row.state === 'changed') sub.dataset.state = 'moved'
+        body.append(name, sub)
+
+        const chip = document.createElement('span')
+        chip.className = 'ext'
+        chip.textContent = ext
+
+        const action = document.createElement('button')
+        action.className = 'row-action'
+        action.textContent = row.action
+        action.disabled = row.action === 'Kept'
+
+        item.append(box, icon, body, chip, action)
+        list.appendChild(item)
+      }
+    </script>
+  </body>
+</html>

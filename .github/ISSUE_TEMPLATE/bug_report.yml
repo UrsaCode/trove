@@ -1,0 +1,52 @@
+name: Bug report
+description: Something behaves differently from how it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please don't paste conversation contents. The *shape* of a conversation —
+        how many files, which types, whether any had been edited — is more
+        useful than what was in it.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: The shortest path to seeing it again.
+      placeholder: |
+        1. Open a conversation with two HTML files
+        2. Keep both from the popup
+        3. …
+
+  - type: input
+    id: chrome
+    attributes:
+      label: Chrome version
+      placeholder: "142.0.7444.0"
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: How did you install it
+      options:
+        - Built from main
+        - Built from a branch or fork
+        - Not sure
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output
+      description: >
+        Anything from the page console, or from the service worker console
+        (chrome://extensions → Trove → "service worker"). Optional.
+      render: text

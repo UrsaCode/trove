@@ -120,7 +120,7 @@ function paintTether({ counts }) {
 
 function subtitleFor(entry, stored) {
   if (entry.state === STATES.CHANGED || entry.state === STATES.CONFLICT) {
-    return { text: 'newer version in the conversation', state: 'moved' }
+    return { text: 'newer version', state: 'moved' }
   }
   if (entry.state === STATES.NEW) return { text: `${bytes(entry.size)} · not kept yet`, state: null }
   return { text: `${bytes(contentSize(stored?.content))} · ${ago(stored?.capturedAt)}`, state: null }

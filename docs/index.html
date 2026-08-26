@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trove — files Claude wrote, kept</title>
+    <meta
+      name="description"
+      content="A Chrome extension that turns the files Claude generates in a conversation into a local library you own. Browse, read, edit and re-pull them. Nothing leaves your browser."
+    />
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles/site.css" />
+
+    <meta property="og:title" content="Trove — files Claude wrote, kept" />
+    <meta
+      property="og:description"
+      content="Files Claude writes live only inside the conversation. Trove keeps them, grouped by where they came from, and keeps the link back."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <nav class="nav">
+      <a class="brand" href="#top">
+        <svg viewBox="0 0 32 32" width="20" height="20" fill="none" aria-hidden="true">
+          <path
+            d="M6 13v6.5A6.5 6.5 0 0 0 12.5 26h7A6.5 6.5 0 0 0 26 19.5V13"
+            stroke="currentColor"
+            stroke-width="2.8"
+            stroke-linecap="round"
+          />
+          <rect x="12.5" y="4" width="7" height="7" rx="1.6" fill="#5FD3BC" />
+        </svg>
+        Trove
+      </a>
+      <span class="spacer"></span>
+      <a class="link" href="#how">How it works</a>
+      <a class="link" href="#design">Design</a>
+      <a class="link" href="#privacy">Privacy</a>
+      <a class="btn" href="https://github.com/UrsaCode/trove">GitHub</a>
+    </nav>
+
+    <main id="top">
+      <!-- Hero -->
+      <header class="hero">
+        <div class="wrap">
+          <p class="eyebrow reveal">Chrome extension · MIT · local only</p>
+          <h1 class="reveal" data-delay="1">
+            Files Claude wrote, <span class="kept">kept</span>.
+          </h1>
+          <p class="lede reveal" data-delay="2">
+            The files Claude generates live only inside the conversation that made them. Trove
+            keeps them on your machine, grouped by where they came from — and tells you when
+            Claude has changed one since.
+          </p>
+          <div class="actions reveal" data-delay="3">
+            <a class="btn btn-tether" href="#install">Install it</a>
+            <a class="btn" href="https://github.com/UrsaCode/trove">Read the source</a>
+          </div>
+          <p class="note reveal" data-delay="4">
+            No account. No server. No analytics. Nothing leaves this browser.
+          </p>
+
+          <!-- The signature: the tether, drawing itself. -->
+          <div class="demo" id="demo">
+            <div class="demo-rows">
+              <div class="demo-row">
+                <span class="demo-name">fleet-console.html</span>
+                <span class="demo-size">30.6 KB</span>
+                <span class="tether">
+                  <span class="node"></span><span class="wire"></span
+                  ><span class="lbl">tethered</span>
+                </span>
+              </div>
+              <div class="demo-row" data-state="moved">
+                <span class="demo-name">fleet-thresholds.html</span>
+                <span class="demo-size">14.6 KB</span>
+                <span class="tether" data-state="moved">
+                  <span class="node"></span><span class="wire"></span
+                  ><span class="lbl">newer version</span>
+                  <span class="chip-repull">Re-pull</span>
+                </span>
+              </div>
+              <div class="demo-row">
+                <span class="demo-name">entities.csv</span>
+                <span class="demo-size">88 KB</span>
+                <span class="tether">
+                  <span class="node"></span><span class="wire"></span
+                  ><span class="lbl">tethered</span>
+                </span>
+              </div>
+            </div>
+            <p class="demo-caption">
+              A file's <strong>tether</strong> is the line back to the conversation that wrote it.
+              Aqua means your copy and Claude's still agree. Amber means they don't.
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <!-- Problem -->
+      <section>
+        <div class="wrap">
+          <p class="eyebrow reveal">The problem</p>
+          <h2 class="reveal" data-delay="1">
+            A downloaded file forgets where it came from.
+          </h2>
+          <p class="section-lede reveal" data-delay="2">
+            To read a file Claude made, you click its card. To keep it, you download it — and it
+            becomes a loose file in your Downloads folder with no memory of which conversation
+            produced it, and no way to know when Claude has revised it. Trove keeps the file and
+            the link at the same time.
+          </p>
+        </div>
+      </section>
+
+      <!-- How -->
+      <section id="how">
+        <div class="wrap">
+          <p class="eyebrow reveal">How it works</p>
+          <h2 class="reveal" data-delay="1">Keep it, read it, pull it again.</h2>
+
+          <div class="steps">
+            <div class="step reveal" data-delay="1">
+              <div class="num">01</div>
+              <h3>Keep</h3>
+              <p>
+                Every file card in the conversation gets a Keep button. Or take the whole
+                conversation from the toolbar, with per-file progress rather than a spinner.
+              </p>
+            </div>
+            <div class="step reveal" data-delay="2">
+              <div class="num">02</div>
+              <h3>Read</h3>
+              <p>
+                Files open on paper, full width, in their own tab. Nothing the extension owns is
+                ever drawn over the document. Source turns the same view into an editor.
+              </p>
+            </div>
+            <div class="step reveal" data-delay="3">
+              <div class="num">03</div>
+              <h3>Re-pull</h3>
+              <p>
+                When Claude changes a file, Trove says so and offers the current version. If you
+                edited your copy, it asks first — that is the one thing it cannot undo.
+              </p>
+            </div>
+          </div>
+
+          <figure class="shot reveal">
+            <img
+              src="shots/library.jpg"
+              width="1568"
+              height="688"
+              alt="The Trove library: conversations on the left rail, a table of captured files in the middle with a Source column showing which copies have fallen behind, and a rendered HTML file previewed on the right."
+              loading="lazy"
+            />
+            <figcaption>
+              The library. Conversations on the rail, because that is how you remember a file —
+              not by its name, but by what you were doing when it appeared.
+            </figcaption>
+          </figure>
+
+          <figure class="shot reveal">
+              <img
+                src="shots/reader.jpg"
+                width="1568"
+                height="688"
+                alt="The Trove reader: a rendered dashboard on a light paper surface floating in a dark window, with controls in a band above and the file's full path and capture time in a band below."
+                loading="lazy"
+              />
+            <figcaption>
+              The Reader. Every control lives in the bands above and below the document, so
+              nothing Trove owns is ever drawn over the file.
+            </figcaption>
+          </figure>
+
+          <figure class="shot reveal">
+              <img
+                src="shots/popup.jpg"
+                width="1568"
+                height="688"
+                alt="The Trove popup showing a conversation's files, two marked as having newer versions, each row with its own checkbox and Keep or Re-pull button."
+                loading="lazy"
+              />
+            <figcaption>
+              The popup. What this conversation just gave you, and what needs doing — every row
+              with its own action.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Design -->
+      <section id="design">
+        <div class="wrap">
+          <p class="eyebrow reveal">Design</p>
+          <h2 class="reveal" data-delay="1">A frame around someone else's document.</h2>
+          <p class="section-lede reveal" data-delay="2">
+            The chrome is graphite and recedes; the captured file gets the only light surface on
+            screen. Colour is rationed to three meanings and used for nothing else.
+          </p>
+
+          <div class="vocab">
+            <div class="word reveal" data-delay="1">
+              <div class="swatch" style="background: #5fd3bc"></div>
+              <h3>Tether</h3>
+              <p>Your copy and the conversation still agree.</p>
+              <p><code>#5FD3BC</code></p>
+            </div>
+            <div class="word reveal" data-delay="2">
+              <div class="swatch" style="background: #e5a93c"></div>
+              <h3>Moved</h3>
+              <p>
+                They disagree — the source moved on, an edit is unsaved, or edits are about to be
+                overwritten.
+              </p>
+              <p><code>#E5A93C</code></p>
+            </div>
+            <div class="word reveal" data-delay="3">
+              <div class="swatch" style="background: #e0664e"></div>
+              <h3>Sever</h3>
+              <p>Destruction, and only destruction.</p>
+              <p><code>#E0664E</code></p>
+            </div>
+          </div>
+
+          <ul class="rules">
+            <li class="reveal">
+              <span class="rule-name">Mono is data</span>
+              <p class="rule-body">
+                If the filesystem produced the string — a name, a path, a byte count, a timestamp
+                — it is set in IBM Plex Mono. If a person wrote it, it is Archivo.
+              </p>
+            </li>
+            <li class="reveal">
+              <span class="rule-name">Paper is sacred</span>
+              <p class="rule-body">
+                No badge, watermark, toolbar or overlay is ever drawn on top of a rendered file.
+                Controls live in the bands above and below it.
+              </p>
+            </li>
+            <li class="reveal">
+              <span class="rule-name">No history, say so</span>
+              <p class="rule-body">
+                Re-pulling overwrites, so every screen that can destroy something names what is
+                lost, in plain words, before it happens.
+              </p>
+            </li>
+            <li class="reveal">
+              <span class="rule-name">Local is a feature</span>
+              <p class="rule-body">
+                <em>Nothing leaves this browser</em> sits in the library's footer permanently, not
+                in a settings page nobody opens.
+              </p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Privacy -->
+      <section id="privacy">
+        <div class="wrap">
+          <p class="eyebrow reveal">Privacy</p>
+          <h2 class="reveal" data-delay="1">There is nowhere for your files to go.</h2>
+          <p class="section-lede reveal" data-delay="2">
+            Trove has no server and no account. It makes no network requests except to
+            <code class="mono">claude.ai</code>, using the session you already have, to list and
+            download files from the conversation you are looking at. Everything it keeps lives in
+            the extension's own storage on your machine.
+          </p>
+
+          <div class="facts">
+            <div class="fact reveal" data-delay="1">
+              <div class="n">1</div>
+              <div class="l">host it ever contacts — <span class="mono">claude.ai</span></div>
+            </div>
+            <div class="fact reveal" data-delay="2">
+              <div class="n">0</div>
+              <div class="l">accounts, servers, trackers or analytics</div>
+            </div>
+            <div class="fact reveal" data-delay="3">
+              <div class="n">MIT</div>
+              <div class="l">licensed, and the source is all there is</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Install -->
+      <section id="install">
+        <div class="wrap">
+          <p class="eyebrow reveal">Install</p>
+          <h2 class="reveal" data-delay="1">Build it and load it unpacked.</h2>
+          <p class="section-lede reveal" data-delay="2">
+            Trove is not on the Chrome Web Store yet, so it installs from source. You need Node 20
+            or newer.
+          </p>
+
+          <pre class="reveal" data-delay="3"><span class="c"># get it and build</span>
+git clone https://github.com/UrsaCode/trove.git
+cd trove
+npm install
+npm run build
+
+<span class="c"># then, in Chrome:</span>
+<span class="c"># Extensions → Developer mode → Load unpacked → select dist/</span></pre>
+
+          <p class="section-lede reveal" data-delay="4" style="margin-top: 24px">
+            Open a Claude conversation that has produced files, and the Keep buttons appear on the
+            file cards. <a href="https://github.com/UrsaCode/trove/blob/main/CONTRIBUTING.md"
+              >Contributing</a
+            >
+            has the development setup, and the known gaps if you want somewhere to start.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap row">
+        <span>Trove — a <a href="https://ursacode.com">UrsaCode</a> project</span>
+        <span class="spacer"></span>
+        <a href="https://github.com/UrsaCode/trove">Source</a>
+        <a href="https://github.com/UrsaCode/trove/issues">Issues</a>
+        <a href="https://github.com/UrsaCode/trove/blob/main/LICENSE">MIT</a>
+      </div>
+    </footer>
+
+    <script>
+      /*
+       * Reveal on scroll, and draw the tether once when it first arrives.
+       * Each element is unobserved after it fires, so nothing re-animates on
+       * the way back up — a page that replays itself as you scroll reads as
+       * nervous rather than alive.
+       */
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+      if (reduced) {
+        for (const el of document.querySelectorAll('.reveal')) el.classList.add('in')
+        document.getElementById('demo').classList.add('in')
+      } else {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue
+              entry.target.classList.add('in')
+              observer.unobserve(entry.target)
+            }
+          },
+          { rootMargin: '0px 0px -12% 0px', threshold: 0.15 },
+        )
+
+        for (const el of document.querySelectorAll('.reveal')) observer.observe(el)
+        observer.observe(document.getElementById('demo'))
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # A manifest that fails to parse takes the whole extension down, and it
+      # is the one file no unit test naturally covers.
+      - name: Manifest is valid JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('dist/manifest.json','utf8'))"
+
+      # Every id the page scripts reach for has to exist in the markup. This
+      # has caught real breakage twice.
+      - name: Element ids resolve
+        run: node tools/check-ids.mjs

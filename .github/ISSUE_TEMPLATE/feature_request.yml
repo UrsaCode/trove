@@ -1,0 +1,25 @@
+name: Idea
+description: Something Trove should do that it doesn't
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: >
+        Describe the situation rather than the feature. It is easier to find a
+        good answer from the problem than from a proposed solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: today
+    attributes:
+      label: What do you do today instead
+      description: Including "nothing, I gave up" — that is useful to know.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you had in mind
+      description: Optional. A rough shape is fine.
