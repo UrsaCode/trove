@@ -25,7 +25,7 @@ import { createEditor } from './editor.js'
 import { confirmReplaceEdits, confirmDeleteFile, confirmDiscardEdits } from '../ui/dialog.js'
 import { exportFile } from './export.js'
 import { fileIcon } from '../ui/file-icon.js'
-import { captureScreenshot } from './screenshot.js'
+import { openScreenshotModal } from './screenshot-modal.js'
 
 const el = (id) => document.getElementById(id)
 const params = new URLSearchParams(location.search)
@@ -379,22 +379,13 @@ function beginRename() {
   node.addEventListener('blur', onBlur)
 }
 
+/**
+ * Opens the screenshot modal over whatever is on screen - including in full
+ * screen, where it is the only piece of Trove that ever appears.
+ */
 async function screenshot() {
-  const name = displayName(state.file).replace(/\.[^.]+$/, '') || 'file'
-  // Hide our own chrome first: a screenshot of the document should be the
-  // document, not the document inside our furniture.
-  document.body.classList.add('shooting')
-  try {
-    await captureScreenshot(`${name}.png`)
-  } catch (error) {
-    el('shot').textContent = 'Screenshot failed'
-    el('shot').title = error?.message ?? ''
-    setTimeout(() => {
-      el('shot').textContent = 'Screenshot'
-    }, 2500)
-  } finally {
-    document.body.classList.remove('shooting')
-  }
+  const base = displayName(state.file).replace(/\.[^.]+$/, '') || 'file'
+  await openScreenshotModal({ suggestedName: base })
 }
 
 function goFullScreen() {
@@ -428,6 +419,10 @@ function mountHatch() {
 
   el('hatch-shot').addEventListener('click', screenshot)
   el('hatch-exit').addEventListener('click', exitFullScreen)
+
+  // Say the shortcuts once, here, rather than leaving them undiscoverable.
+  el('hatch-shot').title = 'Screenshot (S)'
+  el('hatch-exit').title = 'Exit full screen (Esc)'
 }
 
 // ── Wiring ────────────────────────────────────────────────────────────────
@@ -466,10 +461,26 @@ el('wrap').addEventListener('click', async () => {
 })
 
 document.addEventListener('keydown', (event) => {
+  // A modal owns the keyboard while it is open.
+  if (document.querySelector('.shot-scrim, .tv-scrim')) return
+
   if ((event.metaKey || event.ctrlKey) && event.key === 's') {
     event.preventDefault()
     if (state.dirty) save()
+    return
   }
+
+  // Bare S takes a screenshot. In full screen there is no toolbar to reach
+  // for, and a shortcut leaves the document uncovered until it is wanted.
+  if (event.key === 's' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    const typing = /^(INPUT|TEXTAREA)$/.test(event.target?.tagName ?? '')
+    if (!typing && !event.target?.isContentEditable && state.mode !== 'source') {
+      event.preventDefault()
+      screenshot()
+      return
+    }
+  }
+
   if (event.key === 'Escape') {
     if (fullScreen) exitFullScreen()
     else if (!state.dirty) window.close()

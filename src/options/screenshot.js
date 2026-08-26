@@ -6,29 +6,59 @@
  * canvas-rasterising approach and is the point of the sandbox.
  *
  * Capturing the visible tab sidesteps that entirely: the browser composites
- * what is actually on screen. In full screen that is exactly the document, and
- * in the Reader we hide our own bands for the duration, so either way the
- * picture is the file rather than the file inside our furniture.
+ * what is actually on screen. Trove's own bands are hidden for the duration, so
+ * the picture is the document rather than the document inside our furniture.
  */
 
 import { MSG } from '../lib/messages.js'
 
-/** Give the browser a frame to paint the hidden chrome before capturing. */
-function nextPaint() {
-  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+/**
+ * Give the browser a frame to paint the hidden chrome before capturing.
+ *
+ * Raced against a timer on purpose: requestAnimationFrame does not fire at all
+ * in a hidden tab, so waiting on it alone would hang here forever and leave the
+ * page with all its furniture hidden. A capture from a backgrounded tab will
+ * fail on its own terms further down, with an error the caller can show.
+ */
+function nextPaint(timeoutMs = 250) {
+  return new Promise((resolve) => {
+    let settled = false
+    const done = () => {
+      if (settled) return
+      settled = true
+      resolve()
+    }
+    requestAnimationFrame(() => requestAnimationFrame(done))
+    setTimeout(done, timeoutMs)
+  })
 }
 
 /**
- * @param {string} filename
- * @returns {Promise<void>}
+ * Capture the tab with everything of ours taken off screen.
+ *
+ * `shooting` hides the bands, the save bar, the details panel and the modal
+ * itself. The class is removed before this resolves, so a caller never has to
+ * remember to put the furniture back.
+ *
+ * @returns {Promise<string>} a PNG data URL
  */
-export async function captureScreenshot(filename) {
-  await nextPaint()
+export async function captureTab() {
+  document.body.classList.add('shooting')
+  try {
+    await nextPaint()
+    const response = await chrome.runtime.sendMessage({ type: MSG.SCREENSHOT })
+    if (!response?.ok) throw new Error(response?.error ?? 'Could not capture the tab')
+    return response.dataUrl
+  } finally {
+    document.body.classList.remove('shooting')
+  }
+}
 
-  const response = await chrome.runtime.sendMessage({ type: MSG.SCREENSHOT })
-  if (!response?.ok) throw new Error(response?.error ?? 'Could not capture the tab')
+export async function dataUrlToBlob(dataUrl) {
+  return (await fetch(dataUrl)).blob()
+}
 
-  const blob = await (await fetch(response.dataUrl)).blob()
+export function saveBlob(blob, filename) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -37,4 +67,15 @@ export async function captureScreenshot(filename) {
   link.click()
   link.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+/**
+ * Put the image on the clipboard.
+ *
+ * Only PNG is writable as an image, which is what we capture anyway. Requires
+ * the document to be focused, so this must run from a real user gesture.
+ */
+export async function copyBlob(blob) {
+  if (!navigator.clipboard?.write) throw new Error('This browser cannot copy images')
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
 }

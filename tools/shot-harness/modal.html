@@ -1,0 +1,17 @@
+﻿<!doctype html><html><head><meta charset="utf-8"><title>Trove — screenshot modal</title>
+<link rel="stylesheet" href="/src/styles/tokens.css?v=3">
+<link rel="stylesheet" href="/src/styles/reader.css?v=3">
+<style>html,body{width:1512px;height:860px;overflow:hidden}
+.stage{padding:24px}.paper{border-radius:3px}</style></head>
+<body class="full-screen">
+<div class="reader"><main class="stage"><iframe class="paper" id="paper"></iframe></main></div>
+<script src="/tools/shot-harness/seed.js"></script>
+<script type="module">
+  renderPreview(document.getElementById('paper'))
+  // Stub the capture so the modal can be inspected without extension APIs.
+  window.chrome = { runtime: { sendMessage: async () => ({ ok: true,
+    dataUrl: await fetch('/docs/shots/reader.jpg').then(r=>r.blob())
+      .then(b=>new Promise(res=>{const f=new FileReader();f.onload=()=>res(f.result);f.readAsDataURL(b)})) }) } }
+  const { openScreenshotModal } = await import('/tools/shot-harness/modal-entry.js')
+  openScreenshotModal({ suggestedName: 'fleet-console' })
+</script></body></html>
