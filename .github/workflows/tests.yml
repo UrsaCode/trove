@@ -33,3 +33,12 @@ jobs:
       # has caught real breakage twice.
       - name: Element ids resolve
         run: node tools/check-ids.mjs
+
+      # The landing page states where Trove can be installed from. A stale
+      # claim there outlives the release it described.
+      - name: Site says what is true
+        run: node tools/check-site.mjs
+
+      # The uploadable archive has to stay buildable, not just the extension.
+      - name: Store archive packages
+        run: node tools/package.mjs

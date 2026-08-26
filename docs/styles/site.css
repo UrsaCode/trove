@@ -648,3 +648,20 @@ footer .spacer {
     gap: 8px;
   }
 }
+
+/*
+ * "In review" - a state, not a call to action, so it takes the divergence
+ * colour rather than the accent. Aqua is reserved for a live link back.
+ */
+.pending {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--moved);
+  color: var(--moved);
+  font: 400 10px/1.5 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}

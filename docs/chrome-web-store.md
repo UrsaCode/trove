@@ -1,5 +1,36 @@
 # Publishing Trove on the Chrome Web Store
 
+## Status
+
+**Version 1.0.0 submitted, awaiting review.**
+
+| | |
+|---|---|
+| Item ID | `mikpichonjdjbnhjafkjiofacepfpffc` |
+| Listing | https://chromewebstore.google.com/detail/mikpichonjdjbnhjafkjiofacepfpffc |
+| Dashboard | https://chrome.google.com/webstore/devconsole |
+
+The listing URL returns nothing until the item is approved. The item ID is
+permanent: every future version has to be uploaded to *this* item, from the same
+developer account, or it becomes a second extension that existing users never
+receive.
+
+### When it is approved
+
+- Swap the "awaiting review" lines in `README.md` and `docs/index.html` for the
+  live link.
+- Add the listing to the repository's About panel on GitHub.
+- Tag the release: `git tag v1.0.0 && git push origin v1.0.0`.
+
+### If it is rejected
+
+Read the reason before changing anything. If it is the host permission, the
+narrower `activeTab` design is described under **Read this before you submit**
+below, and swapping to it is a small change. Rejections are appealed or
+resubmitted against the same item ID, so nothing here needs recreating.
+
+---
+
 Everything the listing asks for, with the answers written out. Copy from here
 rather than improvising at the form — the data-use answers in particular are a
 declaration, and getting them wrong is a policy problem rather than a typo.

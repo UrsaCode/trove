@@ -12,6 +12,8 @@ again when the conversation moves on.
 
 [Site](https://ursacode.github.io/trove/) · [Install](#install) · [How it works](#how-it-works) · [Privacy](#privacy) · [Contributing](CONTRIBUTING.md)
 
+**Submitted to the Chrome Web Store — awaiting review.**
+
 </div>
 
 ---
@@ -40,7 +42,18 @@ the link back.
 
 ## Install
 
-Trove is not on the Chrome Web Store yet, so it installs unpacked:
+### From the Chrome Web Store
+
+Trove has been submitted and is **waiting on review**. The listing link will not
+resolve until it is approved:
+
+    https://chromewebstore.google.com/detail/mikpichonjdjbnhjafkjiofacepfpffc
+
+Item ID `mikpichonjdjbnhjafkjiofacepfpffc`.
+
+### From source
+
+Until then — and for development either way — it installs unpacked:
 
 ```bash
 git clone https://github.com/UrsaCode/trove.git
