@@ -28,15 +28,67 @@ function showMessage(text) {
   root.appendChild(p)
 }
 
+/**
+ * The height of the rendered document, as it reported itself.
+ *
+ * Sandbox flags propagate to descendants, and a sandboxed document without
+ * allow-same-origin gets its own opaque origin - so this page and the frame it
+ * created are cross-origin, and contentDocument is null. Measuring the rendered
+ * document from out here is simply not possible.
+ *
+ * So the document is asked. A few lines appended to the markup post its
+ * scrollHeight back, which is the only channel across that boundary. It is
+ * additive, changes nothing about how the file draws, and never touches the
+ * copy Trove stores - Source always shows the file as captured.
+ */
+let reportedHeight = 0
+
+const HEIGHT_REPORTER = [
+  '<script>(function(){',
+  'function h(){try{parent.postMessage({__troveHeight:Math.max(',
+  'document.documentElement.scrollHeight,',
+  'document.body?document.body.scrollHeight:0)},"*")}catch(e){}}',
+  // Height settles at different moments depending on fonts, images and script.
+  'addEventListener("load",h);addEventListener("resize",h);',
+  'setTimeout(h,60);setTimeout(h,500);',
+  'try{new ResizeObserver(h).observe(document.documentElement)}catch(e){}',
+  '})()</scr' + 'ipt>',
+].join('')
+
 function showMarkup(html) {
   clear()
+  reportedHeight = 0
+
+  const stage = document.createElement('div')
+  stage.id = 'stage'
+
   const frame = document.createElement('iframe')
   frame.id = 'frame'
   // The nested frame keeps the captured document's own <html>/<head> intact
   // rather than splicing its markup into this page.
-  frame.srcdoc = html
-  root.appendChild(frame)
+  frame.srcdoc = html + HEIGHT_REPORTER
+  stage.appendChild(frame)
+  root.appendChild(stage)
 }
+
+/**
+ * Grow the frame to the whole document and let the stage scroll instead.
+ *
+ * With the frame at its full height there is no inner scrollbar to reach
+ * across the origin boundary for: the scroll belongs to this page, which can
+ * both measure and move it.
+ */
+window.addEventListener('message', (event) => {
+  const height = Number(event.data?.__troveHeight)
+  if (!Number.isFinite(height) || height <= 0) return
+
+  const frame = document.getElementById('frame')
+  const stage = document.getElementById('stage')
+  if (!frame || !stage || frame.contentWindow !== event.source) return
+
+  reportedHeight = Math.ceil(height)
+  frame.style.height = `${reportedHeight}px`
+})
 
 function showImage(url) {
   clear()
@@ -52,52 +104,65 @@ function showImage(url) {
 
 function showText(text) {
   clear()
+  reportedHeight = 0
+
+  const stage = document.createElement('div')
+  stage.id = 'stage'
+
   const frame = document.createElement('iframe')
   frame.id = 'frame'
   const pre = document.createElement('pre')
   pre.textContent = text
-  frame.srcdoc = `<!doctype html><meta charset="utf-8"><style>
+  frame.srcdoc = `<!doctype html><meta charset="utf-8">${HEIGHT_REPORTER}<style>
     body { margin:0; padding:20px; background:#fbf9f5; color:#23211c;
            font:400 12.5px/1.6 ui-monospace, Menlo, Consolas, monospace; }
     pre { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
   </style>${pre.outerHTML}`
-  root.appendChild(frame)
+  stage.appendChild(frame)
+  root.appendChild(stage)
 }
 
 /**
- * The rendered document's own scroll geometry.
+ * The scroll geometry a full-page capture works from.
  *
- * The nested frame is a srcdoc of this page, so it shares this opaque origin
- * and can be measured. The host cannot reach it - that is the whole point of
- * the sandbox - so full-page capture has to be driven from in here.
+ * Reported by the stage, which this page owns, rather than by the frame - the
+ * frame is behind an opaque-origin boundary and cannot be measured from here at
+ * all. See the note on reportedHeight.
  */
 function scrollMetrics() {
-  const frame = document.getElementById('frame')
-  const doc = frame?.contentDocument
-  const image = document.getElementById('image')
+  const stage = document.getElementById('stage')
 
-  if (doc?.documentElement) {
-    const el = doc.scrollingElement ?? doc.documentElement
+  // The stage belongs to this page, so its geometry is always readable - unlike
+  // the frame's, which sits behind an opaque-origin boundary.
+  if (stage) {
     return {
-      scrollHeight: Math.max(el.scrollHeight, doc.body?.scrollHeight ?? 0),
-      clientHeight: el.clientHeight || frame.clientHeight,
-      scrollTop: el.scrollTop,
-      scrollable: true,
+      scrollHeight: Math.max(stage.scrollHeight, reportedHeight),
+      clientHeight: stage.clientHeight,
+      scrollTop: stage.scrollTop,
+      // Without a reported height the frame is still only a viewport tall, and
+      // a full-page capture would be a viewport repeated.
+      scrollable: reportedHeight > stage.clientHeight + 4,
     }
   }
+
+  const image = document.getElementById('image')
   if (image) {
     // A bare image never scrolls; one capture is the whole thing.
-    return { scrollHeight: image.clientHeight, clientHeight: image.clientHeight, scrollTop: 0, scrollable: false }
+    return {
+      scrollHeight: image.clientHeight,
+      clientHeight: image.clientHeight,
+      scrollTop: 0,
+      scrollable: false,
+    }
   }
   return { scrollHeight: 0, clientHeight: 0, scrollTop: 0, scrollable: false }
 }
 
 function scrollTo(y) {
-  const doc = document.getElementById('frame')?.contentDocument
-  const el = doc?.scrollingElement ?? doc?.documentElement
-  if (!el) return { scrollTop: 0 }
-  el.scrollTop = y
-  return { scrollTop: el.scrollTop }
+  const stage = document.getElementById('stage')
+  if (!stage) return { scrollTop: 0 }
+  stage.scrollTop = y
+  return { scrollTop: stage.scrollTop }
 }
 
 window.addEventListener('message', (event) => {

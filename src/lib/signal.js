@@ -17,13 +17,24 @@ const SIGNALS = ['/completion', '/wiggle/download-file']
 const NEVER = ['/wiggle/list-files']
 
 export function isFileSignal(url) {
+  if (typeof url !== 'string' || !url.includes('/')) return false
+
+  /*
+   * Cheap reject first.
+   *
+   * This runs inside the page's own fetch and XHR, so it is on the hot path of
+   * every request claude.ai makes - and the overwhelming majority are of no
+   * interest. Parsing a URL for each of those was allocation we were doing
+   * thousands of times to answer no. A substring scan gets us there without it.
+   */
+  if (!SIGNALS.some((fragment) => url.includes(fragment))) return false
+
   let pathname
   try {
-    pathname = new URL(String(url), 'https://claude.ai').pathname
+    pathname = new URL(url, 'https://claude.ai').pathname
   } catch {
     return false
   }
-  if (typeof url !== 'string' || !url.includes('/')) return false
   if (NEVER.some((f) => pathname.includes(f))) return false
   return SIGNALS.some((f) => pathname.includes(f))
 }

@@ -1,0 +1,45 @@
+﻿<!doctype html><html><head><meta charset="utf-8"><title>Trove — fullpage probe</title></head>
+<body style="margin:0;background:#0E1014">
+<!-- Same sandbox flags as the real options page: no allow-same-origin. -->
+<iframe id="host" src="/src/options/sandbox.html" width="900" height="500"
+        style="border:0;display:block"
+        sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+<pre id="out" style="color:#E9E7E2;font:12px ui-monospace;padding:12px;white-space:pre-wrap"></pre>
+<script>
+const out = document.getElementById('out');
+const host = document.getElementById('host');
+const log = (m) => { out.textContent += m + "\n"; };
+let seq = 1;
+function ask(payload, ms = 2500) {
+  return new Promise((resolve) => {
+    const id = seq++;
+    function on(e) {
+      if (e.data && e.data.channel === 'cfv-preview' && e.data.ack && e.data.id === id) {
+        removeEventListener('message', on); resolve(e.data);
+      }
+    }
+    addEventListener('message', on);
+    host.contentWindow.postMessage(Object.assign({ channel: 'cfv-preview', id }, payload), '*');
+    setTimeout(() => { removeEventListener('message', on); resolve({ timedOut: true }); }, ms);
+  });
+}
+addEventListener('message', (e) => {
+  if (e.data && e.data.channel === 'cfv-preview' && e.data.ready) log('sandbox ready');
+});
+window.RUN = async function () {
+  const tall = '<!doctype html><html><body style="margin:0">' +
+    Array.from({length: 60}, (_, i) =>
+      '<p style="height:60px;margin:0;font:16px sans-serif">row ' + i + '</p>').join('') +
+    '</body></html>';
+  log('rendering a ~3600px document into a 500px frame');
+  log('render ack: ' + JSON.stringify(await ask({ render: 'markup', content: tall })));
+  await new Promise(r => setTimeout(r, 900));
+  const m = await ask({ render: 'metrics' });
+  log('metrics: ' + JSON.stringify(m.metrics));
+  const s1 = await ask({ render: 'scroll', y: 1000 });
+  log('scroll to 1000 -> ' + JSON.stringify(s1.scrolled));
+  const s2 = await ask({ render: 'scroll', y: 99999 });
+  log('scroll to end  -> ' + JSON.stringify(s2.scrolled));
+  return { metrics: m.metrics, at1000: s1.scrolled, atEnd: s2.scrolled };
+};
+</script></body></html>

@@ -19,11 +19,24 @@
       #root {
         height: 100%;
       }
+      /*
+       * The stage owns the scroll. The frame is grown to the whole document's
+       * height once it reports it, so there is no inner scrollbar to reach for
+       * across the origin boundary.
+       */
+      #stage {
+        height: 100%;
+        overflow: auto;
+      }
       #frame {
         width: 100%;
         height: 100%;
         border: 0;
         display: block;
+      }
+      /* Once a height is known the frame is sized to it, not to the viewport. */
+      #stage > #frame {
+        min-height: 100%;
       }
       #image {
         display: block;

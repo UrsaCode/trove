@@ -13,6 +13,7 @@ import { MSG, BRIDGE_SOURCE } from '../lib/messages.js'
 import { conversationIdFromUrl } from '../lib/signal.js'
 import { classifyFile } from '../lib/diff.js'
 import { encodeRecords } from '../lib/transport.js'
+import { whenSettled } from './idle.js'
 
 const ORG_CACHE_KEY = 'cfv:orgId'
 
@@ -63,6 +64,34 @@ async function storedFiles(convId) {
  */
 let statesPromise = null
 
+/**
+ * The last state map we worked out, kept per tab.
+ *
+ * A reload previously had to wait on a listing and a round trip before any card
+ * could say whether its file was kept. Remembering the answer lets the buttons
+ * paint from the last known state at once and be corrected in the background,
+ * which is the difference between a page that loads and a page that hangs.
+ */
+const STATE_CACHE_KEY = 'trove:states'
+
+function cachedStates() {
+  try {
+    const raw = sessionStorage.getItem(`${STATE_CACHE_KEY}:${currentConvId()}`)
+    if (!raw) return null
+    return new Map(JSON.parse(raw))
+  } catch {
+    return null
+  }
+}
+
+function rememberStates(map) {
+  try {
+    sessionStorage.setItem(`${STATE_CACHE_KEY}:${currentConvId()}`, JSON.stringify([...map]))
+  } catch {
+    /* a full or blocked sessionStorage costs us nothing but the shortcut */
+  }
+}
+
 function invalidateStates() {
   statesPromise = null
 }
@@ -73,7 +102,11 @@ async function stateByPath(convId) {
   statesPromise = (async () => {
     const [remote, stored] = await Promise.all([entries(), storedFiles(convId)])
     const storedByPath = new Map(stored.map((f) => [f.path, f]))
-    return new Map(remote.map((r) => [r.path, classifyFile(r, storedByPath.get(r.path) ?? null)]))
+    const map = new Map(
+      remote.map((r) => [r.path, classifyFile(r, storedByPath.get(r.path) ?? null)]),
+    )
+    rememberStates(map)
+    return map
   })()
 
   try {
@@ -181,6 +214,17 @@ if (currentConvId()) {
   cards = mountCards({
     getEntries: () => entries(),
     getStates: () => stateByPath(currentConvId()),
+    // Synchronous, so a button can be labelled without waiting for anything.
+    getCachedStates: cachedStates,
     onCapture: (path) => capture([path]),
   })
+
+  /*
+   * The first real check waits for the page.
+   *
+   * Buttons mount immediately from the cached state, but nothing touches the
+   * network until claude.ai has finished loading and gone quiet - competing
+   * with the page for the connection is what made a reload sit there.
+   */
+  whenSettled().then(() => cards?.refreshAll())
 }

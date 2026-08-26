@@ -164,7 +164,7 @@ function pickFile(anchorEl, entries) {
  * @param {() => Promise<Map>} options.getStates      path -> state
  * @param {(path: string) => Promise<void>} options.onCapture
  */
-export function mountCards({ getEntries, getStates, onCapture }) {
+export function mountCards({ getEntries, getStates, getCachedStates = () => null, onCapture }) {
   injectStyles()
 
   /**
@@ -197,6 +197,32 @@ export function mountCards({ getEntries, getStates, onCapture }) {
     const card = readCard(cardEl)
     let boundPath = null
 
+    function paint(state) {
+      const { text, title } = LABELS[state] ?? LABELS[STATES.NEW]
+      label.textContent = text
+      button.title = title
+      button.dataset.state = state
+      button.disabled = state === STATES.UNCHANGED
+    }
+
+    /**
+     * Label from what is already known, without waiting for anything.
+     *
+     * Matching needs the file list, so a cold cache can only offer a neutral
+     * label - but a warm one lets a reload paint the right word immediately.
+     */
+    function paintFromCache() {
+      const cached = getCachedStates()
+      if (!cached) return false
+
+      const match = matchCard(card, [...cached.keys()])
+      if (!match.path) return false
+
+      boundPath = match.path
+      paint(cached.get(match.path) ?? STATES.NEW)
+      return true
+    }
+
     async function refresh() {
       const entries = await getEntries()
       const match = matchCard(card, entries.map((e) => e.path))
@@ -209,13 +235,7 @@ export function mountCards({ getEntries, getStates, onCapture }) {
         return
       }
 
-      const states = await getStates()
-      const state = states.get(boundPath) ?? STATES.NEW
-      const { text, title } = LABELS[state] ?? LABELS[STATES.NEW]
-      label.textContent = text
-      button.title = title
-      button.dataset.state = state
-      button.disabled = state === STATES.UNCHANGED
+      paint((await getStates()).get(boundPath) ?? STATES.NEW)
     }
 
     button.addEventListener('click', async (event) => {
@@ -245,20 +265,46 @@ export function mountCards({ getEntries, getStates, onCapture }) {
 
     painters.add(refresh)
 
+    // Something sensible on the button before any request is made.
+    if (!paintFromCache()) paint(STATES.NEW)
+
     // The cell is a `justify-between` flex row: content first, actions last.
     // Use lastElementChild, not a `:last-child` selector - the latter matches
     // the first *descendant* that happens to be a last child, which is a
     // deeply nested div, not the action area.
     const host = cardEl.lastElementChild ?? cardEl
     host.appendChild(button)
+  }
 
-    refresh().catch(() => {})
+  /**
+   * Resolve state soon, but never urgently.
+   *
+   * Mounting no longer fetches anything, so a card that appears mid-conversation
+   * needs something to come back for it. This coalesces those into one check at
+   * the next quiet moment rather than one per card as they stream in.
+   */
+  let pendingRefresh = null
+
+  function scheduleRefresh() {
+    if (pendingRefresh) return
+    const run = () => {
+      pendingRefresh = null
+      refreshAll()
+    }
+    pendingRefresh =
+      typeof requestIdleCallback === 'function'
+        ? requestIdleCallback(run, { timeout: 1500 })
+        : setTimeout(run, 1500)
   }
 
   function scan() {
+    let mounted = 0
     for (const cardEl of document.querySelectorAll(CARD_SELECTOR)) {
+      if (cardEl.hasAttribute(MARK)) continue
       decorate(cardEl).catch(() => {})
+      mounted++
     }
+    if (mounted > 0) scheduleRefresh()
   }
 
   let queued = null
