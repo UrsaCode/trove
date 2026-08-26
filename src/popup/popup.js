@@ -232,19 +232,34 @@ function paintSelection() {
 
 // ── Capturing ─────────────────────────────────────────────────────────────
 
-/** One file. Its own row shows its own progress. */
+/** One file. Its own row shows its own progress, and its own outcome. */
 async function captureOne(path) {
   const row = rows.get(path)
   if (row) {
     row.item.dataset.busy = 'true'
     row.action.disabled = true
-    row.action.textContent = '…'
+    row.action.textContent = 'Keeping'
   }
 
   try {
     const result = await chrome.tabs.sendMessage(tabId, { type: MSG.CAPTURE_FILE, path })
     if (result?.ok === false) throw new Error(result.error)
+
+    // A capture can report ok while saving nothing - that was the Blob bug - so
+    // the row only claims success if a file actually came back.
+    if (result?.saved === 0) throw new Error('nothing was saved')
+
     selected.delete(path)
+    if (row) {
+      row.item.dataset.busy = 'false'
+      row.item.dataset.state = STATES.UNCHANGED
+      row.action.textContent = 'Kept'
+      row.action.disabled = true
+      row.box.checked = false
+      row.box.disabled = true
+      delete row.sub.dataset.state
+      row.sub.textContent = 'just now'
+    }
     return true
   } catch (error) {
     if (row) {
@@ -253,7 +268,7 @@ async function captureOne(path) {
       row.action.textContent = 'Retry'
       row.action.title = error?.message ?? 'Keeping failed'
       row.sub.dataset.state = 'moved'
-      row.sub.textContent = 'could not be kept'
+      row.sub.textContent = `not kept - ${error?.message ?? 'failed'}`
     }
     return false
   }
@@ -264,18 +279,57 @@ async function captureSelected() {
   const paths = [...selected]
   const button = el('capture')
   button.disabled = true
+  setCapturing(true)
 
   let done = 0
-  for (const path of paths) {
-    button.textContent = `Keeping ${done + 1} of ${paths.length}…`
+  let failed = 0
+  for (const [index, path] of paths.entries()) {
+    button.textContent = `Keeping ${index + 1} of ${paths.length}`
+    setCapturingProgress(index + 1, paths.length)
     if (await captureOne(path)) done++
+    else failed++
   }
 
+  setCapturing(false)
   button.disabled = false
+
   // The conversation's cards were decided before this ran, so tell them to
   // repaint rather than leaving them offering to keep what is already kept.
   await refreshCards()
   await load()
+
+  // Say so when part of a batch did not land, rather than letting a silent
+  // reload be the only sign.
+  if (failed > 0) {
+    el('status').classList.remove('hidden')
+    el('status').dataset.state = 'moved'
+    el('status-text').textContent = `${failed} failed`
+  }
+}
+
+/**
+ * The capturing state.
+ *
+ * Amber, because a capture in flight is a moment when your copy and the
+ * conversation disagree - the same meaning the colour carries everywhere else.
+ * The tether animates while it runs so the panel reads as working rather than
+ * frozen.
+ */
+function setCapturing(on) {
+  document.body.classList.toggle('capturing', on)
+  const status = el('status')
+  if (on) {
+    status.classList.remove('hidden')
+    status.dataset.state = 'capturing'
+    el('status-text').textContent = 'Capturing'
+    el('tether').dataset.state = 'capturing'
+  } else {
+    el('tether').removeAttribute('data-state')
+  }
+}
+
+function setCapturingProgress(done, total) {
+  el('tether').querySelector('.lbl').textContent = `keeping ${done} of ${total}`
 }
 
 async function refreshCards() {

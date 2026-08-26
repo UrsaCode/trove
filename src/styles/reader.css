@@ -372,3 +372,48 @@ body.shooting .paper {
 body.shooting .reader {
   grid-template-rows: 1fr;
 }
+
+/*
+ * Turning wrapping off makes the editor's content as wide as its longest line.
+ * Without these, that width propagated out through the flex chain and gave the
+ * whole page a horizontal scroll - which is what pushed the top band's buttons
+ * off to the right. The overflow belongs to the editor's own scroller, not to
+ * the document.
+ */
+.reader {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.stage {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.source {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.source .cm-editor {
+  width: 100%;
+  max-width: 100%;
+}
+
+.source .cm-scroller {
+  overflow: auto;
+}
+
+.band {
+  min-width: 0;
+}
+
+/* A short file must not let the band collapse its controls either. */
+.controls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ident {
+  overflow: hidden;
+}

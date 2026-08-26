@@ -11,7 +11,14 @@
  * behind. Everything else in this file exists to keep that promise.
  */
 
-import { captureTab, dataUrlToBlob, saveBlob, copyBlob } from './screenshot.js'
+import {
+  captureTab,
+  dataUrlToBlob,
+  saveBlob,
+  copyBlob,
+  hasCapturePermission,
+  requestCapturePermission,
+} from './screenshot.js'
 
 let styled = false
 
@@ -91,6 +98,21 @@ function ensureStyles() {
       text-align: center;
       max-width: 44ch;
     }
+    /* Asking for a permission is a screen, not an error. */
+    .shot-ask {
+      display: grid; gap: var(--s4); justify-items: center;
+      max-width: 46ch; text-align: center;
+    }
+    .shot-ask h3 {
+      margin: 0;
+      font: 600 var(--t-15)/1.35 var(--ui);
+      color: var(--bone);
+    }
+    .shot-ask p {
+      margin: 0;
+      color: var(--dim);
+      font: 400 var(--t-12)/1.6 var(--ui);
+    }
     /* Taken off screen for the capture, along with the rest of our furniture. */
     body.shooting .shot-scrim { display: none !important }
   `
@@ -163,7 +185,55 @@ export function openScreenshotModal({ suggestedName = 'screenshot' } = {}) {
       for (const button of [retake, copy, save]) button.disabled = busy
     }
 
+    /**
+     * Chrome will not composite the tab without capture access, and the Reader
+     * is a tab the extension opened, so activeTab never applies. Explain what
+     * is being asked for and why, rather than surfacing the raw refusal.
+     */
+    function askForPermission() {
+      body.textContent = ''
+      setBusy(true)
+      copy.disabled = true
+      save.disabled = true
+
+      const ask = document.createElement('div')
+      ask.className = 'shot-ask'
+
+      const heading = document.createElement('h3')
+      heading.textContent = 'Allow Trove to capture this tab'
+
+      const why = document.createElement('p')
+      why.textContent =
+        'Screenshots work by photographing what is on screen, which Chrome treats as a permission. Trove only ever captures its own Reader tab, and the image never leaves your machine.'
+
+      const grant = document.createElement('button')
+      grant.className = 'btn btn-tether'
+      grant.textContent = 'Allow and capture'
+      grant.addEventListener('click', async () => {
+        grant.disabled = true
+        grant.textContent = 'Waiting for Chrome…'
+        const granted = await requestCapturePermission()
+        if (granted) {
+          take()
+          return
+        }
+        grant.disabled = false
+        grant.textContent = 'Allow and capture'
+        const refused = document.createElement('p')
+        refused.textContent = 'Chrome did not grant it. Screenshots stay unavailable until it does.'
+        ask.appendChild(refused)
+      })
+
+      ask.append(heading, why, grant)
+      body.appendChild(ask)
+    }
+
     async function take() {
+      if (!(await hasCapturePermission())) {
+        askForPermission()
+        return
+      }
+
       body.textContent = ''
       const pending = document.createElement('div')
       pending.className = 'shot-pending'

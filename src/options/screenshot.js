@@ -34,6 +34,34 @@ function nextPaint(timeoutMs = 250) {
 }
 
 /**
+ * Whether Chrome will let us composite this tab.
+ *
+ * captureVisibleTab needs activeTab or a matching host permission. activeTab is
+ * only granted when the user invokes the extension's action on a tab, and the
+ * Reader is a tab the extension opened for them - so it never has it. Capture
+ * access is therefore an optional permission, asked for the first time someone
+ * takes a screenshot rather than at install.
+ */
+export async function hasCapturePermission() {
+  if (!chrome.permissions?.contains) return true
+  try {
+    return await chrome.permissions.contains({ origins: ['<all_urls>'] })
+  } catch {
+    return false
+  }
+}
+
+/** Must be called from a user gesture, or Chrome refuses to show the prompt. */
+export async function requestCapturePermission() {
+  if (!chrome.permissions?.request) return false
+  try {
+    return await chrome.permissions.request({ origins: ['<all_urls>'] })
+  } catch {
+    return false
+  }
+}
+
+/**
  * Capture the tab with everything of ours taken off screen.
  *
  * `shooting` hides the bands, the save bar, the details panel and the modal

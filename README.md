@@ -123,7 +123,13 @@ is a file you explicitly export.
 | `storage` | Your settings. |
 | `unlimitedStorage` | Captured files can be large; the default quota would cap the library at a few megabytes. |
 | `tabs` | Find the claude.ai tab that can service a request, and open the Reader. |
-| `activeTab` | Capture the visible tab for the screenshot feature. |
+
+Screenshots need one more, which Trove asks for **only when you first take
+one** and never at install:
+
+| Optional permission | Why |
+|---|---|
+| `<all_urls>` | Chrome's tab-capture API demands either this or `activeTab`, and `activeTab` is only granted when you invoke an extension from the toolbar — which never applies to a tab Trove opened for you. Trove only ever captures its own Reader tab, and the image never leaves your machine. Decline it and everything except screenshots works as normal. |
 
 ## Scope
 

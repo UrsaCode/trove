@@ -335,3 +335,65 @@ body {
 .hidden {
   display: none !important;
 }
+
+/*
+ * Capturing: amber, because work in flight is a moment when your copy and the
+ * conversation disagree - the same meaning the colour carries everywhere else.
+ * The wire travels while it runs, so a panel mid-capture reads as working
+ * rather than frozen.
+ */
+.pill[data-state='capturing'] {
+  color: var(--moved);
+  background: rgba(229, 169, 60, 0.14);
+}
+
+.pill[data-state='capturing'] .dot {
+  animation: trove-pulse 1s ease-in-out infinite;
+}
+
+.tether[data-state='capturing'] .node {
+  background: var(--moved);
+  animation: trove-pulse 1s ease-in-out infinite;
+}
+
+.tether[data-state='capturing'] .lbl {
+  color: var(--moved);
+}
+
+.tether[data-state='capturing'] .wire {
+  background: linear-gradient(
+    90deg,
+    rgba(229, 169, 60, 0.15) 0%,
+    var(--moved) 40%,
+    rgba(229, 169, 60, 0.15) 80%
+  );
+  background-size: 220% 100%;
+  animation: trove-travel 1.1s linear infinite;
+}
+
+@keyframes trove-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes trove-travel {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill[data-state='capturing'] .dot,
+  .tether[data-state='capturing'] .node,
+  .tether[data-state='capturing'] .wire {
+    animation: none;
+  }
+}

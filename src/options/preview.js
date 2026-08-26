@@ -19,15 +19,27 @@ const MARKUP_MIMES = new Set(['text/html', 'image/svg+xml'])
 const ready = new WeakSet()
 /** Resolvers waiting on a frame's ready message. */
 const waiting = new WeakMap()
+/**
+ * The last payload sent to each frame.
+ *
+ * A frame can announce itself after we have already posted - a reload, a
+ * bfcache restore, or simply losing the race - and the earlier message is gone.
+ * Replaying the last one on every ready closes the race from the other side,
+ * which is what was leaving the Reader on "Select a file to preview it".
+ */
+const lastSent = new WeakMap()
 
 window.addEventListener('message', (event) => {
   if (event.data?.channel !== CHANNEL || !event.data.ready) return
   for (const frame of document.querySelectorAll('iframe')) {
-    if (frame.contentWindow === event.source) {
-      ready.add(frame)
-      waiting.get(frame)?.forEach((resolve) => resolve())
-      waiting.delete(frame)
-    }
+    if (frame.contentWindow !== event.source) continue
+
+    ready.add(frame)
+    waiting.get(frame)?.forEach((resolve) => resolve())
+    waiting.delete(frame)
+
+    const pending = lastSent.get(frame)
+    if (pending) frame.contentWindow?.postMessage({ channel: CHANNEL, ...pending }, '*')
   }
 })
 
@@ -46,6 +58,8 @@ function whenReady(frame) {
 }
 
 async function post(frame, message) {
+  // Recorded before the wait, so a ready that arrives mid-wait replays it.
+  lastSent.set(frame, message)
   await whenReady(frame)
 
   return new Promise((resolve) => {

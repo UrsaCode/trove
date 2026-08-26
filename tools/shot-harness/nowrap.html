@@ -1,0 +1,32 @@
+﻿<!doctype html><html><head><meta charset="utf-8"><title>Trove — nowrap probe</title>
+<link rel="stylesheet" href="/src/styles/tokens.css?v=5">
+<link rel="stylesheet" href="/src/styles/reader.css?v=5">
+<style>html,body{width:1200px;height:700px}</style></head>
+<body>
+<div class="reader">
+  <header class="band band-top">
+    <button class="back">&lsaquo;</button>
+    <div class="ident">
+      <div class="name-row"><span class="name mono">one-liner.html</span></div>
+      <div class="tether"><span class="node"></span><span class="wire"></span><span class="lbl">tethered</span></div>
+    </div>
+    <div class="controls">
+      <div class="seg"><button aria-selected="false">Render</button><button aria-selected="true">Source</button></div>
+      <button class="btn" id="wrapbtn">No wrap</button>
+      <button class="btn">Details</button><button class="btn">Screenshot</button>
+      <button class="btn">Save a copy</button><button class="btn">Re-pull</button>
+      <button class="btn btn-sever">Delete</button><button class="btn btn-tether">Full screen</button>
+    </div>
+  </header>
+  <main class="stage"><div class="source" id="src"></div></main>
+  <footer class="band band-bottom"><div class="lineage mono">conv &rsaquo; /mnt/user-data/outputs/one-liner.html &middot; 1.2 KB</div></footer>
+</div>
+<script>
+  // A single very long line, which is what turning wrap off produces.
+  const long = "<!doctype html><html><head><title>x</title></head><body>" + "a".repeat(4000) + "</body></html>";
+  const src = document.getElementById("src");
+  const pre = document.createElement("pre");
+  pre.style.cssText = "margin:0;white-space:pre;font:12px ui-monospace;color:#e9e7e2";
+  pre.textContent = long;
+  src.appendChild(pre);
+</script></body></html>

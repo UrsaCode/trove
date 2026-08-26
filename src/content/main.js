@@ -12,6 +12,7 @@ import { mountCards } from './cards.js'
 import { MSG, BRIDGE_SOURCE } from '../lib/messages.js'
 import { conversationIdFromUrl } from '../lib/signal.js'
 import { classifyFile } from '../lib/diff.js'
+import { encodeRecords } from '../lib/transport.js'
 
 const ORG_CACHE_KEY = 'cfv:orgId'
 
@@ -52,10 +53,35 @@ async function storedFiles(convId) {
   return response?.files ?? []
 }
 
+/**
+ * One in-flight state lookup, shared by every card.
+ *
+ * Each card used to ask independently, so a conversation with thirteen file
+ * cards made thirteen listings and thirteen round trips to the worker on every
+ * page load. They all want the same answer at the same moment, so they now
+ * share one promise, and it is dropped as soon as a capture changes anything.
+ */
+let statesPromise = null
+
+function invalidateStates() {
+  statesPromise = null
+}
+
 async function stateByPath(convId) {
-  const [remote, stored] = await Promise.all([entries(), storedFiles(convId)])
-  const storedByPath = new Map(stored.map((f) => [f.path, f]))
-  return new Map(remote.map((r) => [r.path, classifyFile(r, storedByPath.get(r.path) ?? null)]))
+  if (statesPromise) return statesPromise
+
+  statesPromise = (async () => {
+    const [remote, stored] = await Promise.all([entries(), storedFiles(convId)])
+    const storedByPath = new Map(stored.map((f) => [f.path, f]))
+    return new Map(remote.map((r) => [r.path, classifyFile(r, storedByPath.get(r.path) ?? null)]))
+  })()
+
+  try {
+    return await statesPromise
+  } catch (error) {
+    statesPromise = null
+    throw error
+  }
 }
 
 /** Fetch the named paths and hand them to the service worker to persist. */
@@ -63,7 +89,7 @@ async function capture(paths, { onlyChanged = false } = {}) {
   const convId = currentConvId()
   if (!convId) return { ok: false, error: 'Not a conversation page.' }
 
-  const remote = await entries({ force: true })
+  const remote = await entries({ force: !paths })
   const wanted = paths
     ? remote.filter((e) => paths.includes(e.path))
     : selectForCapture(remote, await storedFiles(convId), { onlyChanged }).entries
@@ -74,6 +100,8 @@ async function capture(paths, { onlyChanged = false } = {}) {
     entries: wanted,
   })
 
+  invalidateStates()
+
   if (records.length) {
     await chrome.runtime.sendMessage({
       type: MSG.SAVE_FILES,
@@ -83,10 +111,13 @@ async function capture(paths, { onlyChanged = false } = {}) {
         orgId: await orgId(),
         url: `https://claude.ai/chat/${convId}`,
       },
-      files: records,
+      // Binary cannot survive the message channel as a Blob - see transport.js.
+      files: await encodeRecords(records),
     })
   }
 
+  // Dropped again after the write, so the next read sees what was just saved.
+  invalidateStates()
   return { ok: true, saved: records.length, errors }
 }
 
@@ -107,8 +138,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           return result
         }
         case MSG.REFRESH_CARDS:
-          // The listing itself may have moved on, so drop the cache first.
+          // The listing itself may have moved on, so drop both caches first.
           entriesCache = { convId: null, at: 0, entries: null }
+          invalidateStates()
           await cards?.refreshAll()
           return { ok: true }
         case MSG.LIST_STATUS: {

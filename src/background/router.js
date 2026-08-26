@@ -9,6 +9,7 @@
 import { MSG } from '../lib/messages.js'
 import { putFile, putConversation, listFiles, getFile, getConversation, contentSize } from '../lib/db.js'
 import { preserveUserFields } from '../lib/naming.js'
+import { decodeRecord } from '../lib/transport.js'
 
 export function createRouter({
   getSettings,
@@ -20,7 +21,8 @@ export function createRouter({
   const pending = new Map()
 
   async function saveFiles({ conversation, files = [] }) {
-    for (const file of files) {
+    for (const encoded of files) {
+      const file = decodeRecord(encoded)
       // A capture replaces content and upstream metadata by design, but the
       // name and note belong to the user - re-pulling must not undo a rename.
       const existing = await getFile(file.id)
