@@ -131,8 +131,14 @@ function ensureStyles() {
  * @param {string} options.suggestedName  filename without extension
  * @param {HTMLIFrameElement} [options.frame] the sandbox frame, needed for
  *   full-page capture - without it only the visible area can be taken
+ * @param {(blob: Blob, name: string) => Promise<void>} [options.onKeep] store
+ *   the shot in the library; the button is hidden when not supplied
  */
-export function openScreenshotModal({ suggestedName = 'screenshot', frame = null } = {}) {
+export function openScreenshotModal({
+  suggestedName = 'screenshot',
+  frame = null,
+  onKeep = null,
+} = {}) {
   ensureStyles()
 
   return new Promise((resolve) => {
@@ -201,9 +207,17 @@ export function openScreenshotModal({ suggestedName = 'screenshot', frame = null
     copy.className = 'btn'
     copy.textContent = 'Copy'
     const save = document.createElement('button')
-    save.className = 'btn btn-tether'
+    save.className = 'btn'
     save.textContent = 'Save PNG'
-    foot.append(name, copy, save)
+
+    // Keeping it is the primary action: a screenshot of a file belongs next to
+    // the file, and saving to disk is the same one-way trip as any export.
+    const keep = document.createElement('button')
+    keep.className = 'btn btn-tether'
+    keep.textContent = 'Keep in Trove'
+    if (!onKeep) keep.classList.add('hidden')
+
+    foot.append(name, copy, save, keep)
 
     const note = document.createElement('div')
     note.className = 'shot-note'
@@ -216,7 +230,7 @@ export function openScreenshotModal({ suggestedName = 'screenshot', frame = null
     let blob = null
 
     function setBusy(busy) {
-      for (const button of [retake, copy, save]) button.disabled = busy
+      for (const button of [retake, copy, save, keep]) button.disabled = busy
     }
 
     /**
@@ -302,7 +316,14 @@ export function openScreenshotModal({ suggestedName = 'screenshot', frame = null
         setBusy(false)
         copy.disabled = true
         save.disabled = true
+        keep.disabled = true
       }
+    }
+
+    /** The filename as typed, with an extension the bytes actually are. */
+    function filename() {
+      const typed = name.value.trim() || `${suggestedName}.png`
+      return typed.toLowerCase().endsWith('.png') ? typed : `${typed}.png`
     }
 
     function finish() {
@@ -328,9 +349,25 @@ export function openScreenshotModal({ suggestedName = 'screenshot', frame = null
 
     save.addEventListener('click', () => {
       if (!blob) return
-      const filename = name.value.trim() || `${suggestedName}.png`
-      saveBlob(blob, filename.endsWith('.png') ? filename : `${filename}.png`)
+      saveBlob(blob, filename())
       finish()
+    })
+
+    keep.addEventListener('click', async () => {
+      if (!blob || !onKeep) return
+      keep.disabled = true
+      keep.textContent = 'Keeping'
+      try {
+        const kept = await onKeep(blob, filename())
+        // Report the name it was actually filed under, which may have been
+        // numbered to avoid replacing an earlier shot.
+        keep.textContent = kept?.name ? `Kept as ${kept.name}` : 'Kept'
+        setTimeout(finish, 900)
+      } catch (error) {
+        keep.disabled = false
+        keep.textContent = 'Keeping failed'
+        keep.title = error?.message ?? ''
+      }
     })
 
     copy.addEventListener('click', async () => {

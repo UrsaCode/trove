@@ -18,6 +18,7 @@ import {
 import { hashContent } from '../lib/hash.js'
 import { MSG } from '../lib/messages.js'
 import { fileCategory } from '../lib/paths.js'
+import { isLocal } from '../lib/diff.js'
 import { displayName, displayTitle, isRenamed, normaliseName } from '../lib/naming.js'
 import { getSettings, setSetting } from '../lib/settings.js'
 import { renderInSandbox, decideRender } from './preview.js'
@@ -26,6 +27,7 @@ import { confirmReplaceEdits, confirmDeleteFile, confirmDiscardEdits } from '../
 import { exportFile } from './export.js'
 import { fileIcon } from '../ui/file-icon.js'
 import { openScreenshotModal } from './screenshot-modal.js'
+import { makeLocalFile, uniqueName } from '../lib/local-file.js'
 
 const el = (id) => document.getElementById(id)
 const params = new URLSearchParams(location.search)
@@ -71,7 +73,10 @@ function paintTether() {
   const label = tether.querySelector('.lbl')
   const conversation = displayTitle(state.conversation)
 
-  if (state.dirty) {
+  if (isLocal(state.file)) {
+    tether.dataset.state = 'gone'
+    label.textContent = `made in Trove · ${conversation}`
+  } else if (state.dirty) {
     tether.dataset.state = 'unsaved'
     label.textContent = 'unsaved changes'
   } else if (state.file?.edited) {
@@ -155,6 +160,8 @@ function paintDetails() {
     ['Kind', file.kind === 'text' ? 'text' : 'binary'],
     ['Category', fileCategory(file.ext)],
     ['Size held', bytes(contentSize(file.content))],
+    ['Origin', isLocal(file) ? 'made in Trove' : 'captured from the conversation'],
+    ...(file.note ? [['Note', file.note]] : []),
     ['Size at source', file.remoteSize ? bytes(file.remoteSize) : '—'],
     ['Captured', stamp(file.capturedAt)],
     ['Updated', stamp(file.updatedAt)],
@@ -220,6 +227,8 @@ async function load() {
   // A file with no renderer opens on Source, and the toggle disappears rather
   // than showing a disabled state.
   const renderable = decideRender(file).render !== 'unsupported'
+  // Nothing to re-pull: this file was never in the conversation.
+  el('repull').classList.toggle('hidden', isLocal(file))
   el('mode').classList.toggle('hidden', !renderable)
   el('shot').classList.toggle('hidden', !renderable)
   state.mode = renderable ? settings.defaultView : 'source'
@@ -385,8 +394,37 @@ function beginRename() {
  */
 async function screenshot() {
   const base = displayName(state.file).replace(/\.[^.]+$/, '') || 'file'
-  // The frame is what full-page capture scrolls, so it has to be handed over.
-  await openScreenshotModal({ suggestedName: base, frame: el('paper') })
+  await openScreenshotModal({
+    suggestedName: `${base}-screenshot`,
+    // The frame is what full-page capture scrolls, so it has to be handed over.
+    frame: el('paper'),
+    onKeep: keepScreenshot,
+  })
+}
+
+/**
+ * File a screenshot in the library, beside the file it was taken of.
+ *
+ * Numbered rather than overwritten on a name clash: screenshots of the same
+ * file get taken repeatedly, and quietly replacing one would be the wrong
+ * default for something with no way back.
+ */
+async function keepScreenshot(blob, name) {
+  const convId = state.file.convId
+  const existing = await listFiles(convId)
+  const taken = existing.map((f) => f.name)
+
+  const record = await makeLocalFile({
+    convId,
+    name: uniqueName(name, taken),
+    content: blob,
+    mime: 'image/png',
+    note: `Screenshot of ${displayName(state.file)}`,
+  })
+
+  await putFile(record)
+  await recount(convId)
+  return record
 }
 
 function goFullScreen() {

@@ -1,0 +1,46 @@
+﻿<!doctype html><html><head><meta charset="utf-8"><title>Trove — header align probe</title>
+<link rel="stylesheet" href="/src/styles/tokens.css?v=10">
+<link rel="stylesheet" href="/src/styles/library.css?v=10">
+<style>html,body{width:1520px;height:700px;overflow:hidden}</style></head>
+<body>
+<div class="library" style="grid-template-columns:244px 1fr">
+  <aside class="rail"></aside>
+  <main class="content">
+    <div class="toolbar"></div>
+    <div class="split" data-detail="off" id="split">
+      <div class="table">
+        <div class="thead">
+          <div class="col-file eyebrow">File</div>
+          <div class="col-size eyebrow">Size</div>
+          <div class="col-when eyebrow">Captured</div>
+          <div class="col-src eyebrow">Source</div>
+        </div>
+        <div class="tbody" id="rows"></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/tools/shot-harness/seed.js"></script>
+<script>
+renderRows([
+  { name:'trove-capture-design.html', conv:'Claude artifact library extension design', size:'48.6 KB', when:'3 min ago', state:'tethered' },
+  { name:'promo-tile-440x280.png', conv:'Claude artifact library extension design', size:'38.6 KB', when:'25 min ago', state:'tethered' },
+  { name:'icon-16.png', conv:'Claude artifact library extension design', size:'344 B', when:'25 min ago', state:'tethered' },
+]);
+window.PROBE = function () {
+  const head = document.querySelector('.thead');
+  const row  = document.querySelector('.trow');
+  const r = (e) => { const b = e.getBoundingClientRect(); return { left: Math.round(b.left), width: Math.round(b.width) }; };
+  const cols = (parent, sel) => [...parent.querySelectorAll(sel)].map(e => Math.round(e.getBoundingClientRect().left));
+  return {
+    tbody: r(document.querySelector('.tbody')),
+    thead: r(head),
+    trow: r(row),
+    trowDisplay: getComputedStyle(row).display,
+    trowBoxSizing: getComputedStyle(row).boxSizing,
+    trowWidthProp: getComputedStyle(row).width,
+    headCols: cols(head, '.col-size, .col-when, .col-src'),
+    rowCols: cols(row, '.col-size, .col-when, .col-src'),
+  };
+};
+</script></body></html>

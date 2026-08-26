@@ -15,6 +15,7 @@ import {
   contentSize,
 } from '../lib/db.js'
 import { fileCategory } from '../lib/paths.js'
+import { isLocal } from '../lib/diff.js'
 import { MSG } from '../lib/messages.js'
 import { confirmDeleteConversation } from '../ui/dialog.js'
 import { exportConversation } from './export.js'
@@ -41,12 +42,14 @@ const liveByConv = new Map()
 
 /** Has the source moved on from what we hold? */
 function hasMoved(file) {
+  if (isLocal(file)) return false
   const live = liveByConv.get(file.convId)?.get(file.path)
   if (!live) return false
   return live.size !== file.remoteSize || live.created_at !== file.remoteCreatedAt
 }
 
 function isGone(file) {
+  if (isLocal(file)) return false
   const live = liveByConv.get(file.convId)
   return Boolean(live) && !live.has(file.path)
 }
@@ -90,7 +93,11 @@ function tetherFor(file) {
   const label = document.createElement('span')
   label.className = 'lbl'
 
-  if (isGone(file)) {
+  if (isLocal(file)) {
+    // Made here, so there is no source to agree or disagree with.
+    wrap.dataset.state = 'gone'
+    label.textContent = 'made in Trove'
+  } else if (isGone(file)) {
     wrap.dataset.state = 'gone'
     label.textContent = 'no longer there'
   } else if (hasMoved(file)) {
@@ -408,7 +415,10 @@ function paintDetailTether(file) {
     label.textContent = ''
     return
   }
-  if (isGone(file)) {
+  if (isLocal(file)) {
+    wrap.dataset.state = 'gone'
+    label.textContent = 'made in Trove'
+  } else if (isGone(file)) {
     wrap.dataset.state = 'gone'
     label.textContent = 'no longer in the conversation'
   } else if (hasMoved(file)) {

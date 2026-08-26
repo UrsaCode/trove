@@ -13,6 +13,19 @@ export const STATES = {
   CHANGED: 'changed',
   CONFLICT: 'conflict',
   ORPHANED: 'orphaned',
+  /** Made here rather than captured - a screenshot, for instance. */
+  LOCAL: 'local',
+}
+
+/**
+ * A file Trove made itself has no upstream to disagree with.
+ *
+ * Without this a screenshot would be reported as orphaned the moment it was
+ * saved, because it is in the library and not in the conversation - which is
+ * true, and completely the wrong thing to say about it.
+ */
+export function isLocal(file) {
+  return file?.origin === 'local'
 }
 
 /**
@@ -22,6 +35,7 @@ export const STATES = {
  */
 export function classifyFile(remoteMeta, storedFile) {
   if (!storedFile) return STATES.NEW
+  if (isLocal(storedFile)) return STATES.LOCAL
   if (!remoteMeta) return STATES.ORPHANED
 
   const moved =
@@ -42,7 +56,7 @@ export function classifyFile(remoteMeta, storedFile) {
  */
 export function diffConversation(remoteMetaList = [], storedFiles = []) {
   const storedByPath = new Map(storedFiles.map((f) => [f.path, f]))
-  const result = { new: [], unchanged: [], changed: [], conflict: [], orphaned: [] }
+  const result = { new: [], unchanged: [], changed: [], conflict: [], orphaned: [], local: [] }
 
   for (const remote of remoteMetaList) {
     const stored = storedByPath.get(remote.path) ?? null
@@ -51,9 +65,14 @@ export function diffConversation(remoteMetaList = [], storedFiles = []) {
 
   const remotePaths = new Set(remoteMetaList.map((f) => f.path))
   for (const stored of storedFiles) {
-    if (!remotePaths.has(stored.path)) {
-      result.orphaned.push({ path: stored.path, stored, state: STATES.ORPHANED })
+    if (remotePaths.has(stored.path)) continue
+    // A file made here was never in the conversation, so its absence from the
+    // listing says nothing about it.
+    if (isLocal(stored)) {
+      result.local.push({ path: stored.path, stored, state: STATES.LOCAL })
+      continue
     }
+    result.orphaned.push({ path: stored.path, stored, state: STATES.ORPHANED })
   }
 
   const counts = {
@@ -62,8 +81,15 @@ export function diffConversation(remoteMetaList = [], storedFiles = []) {
     changed: result.changed.length,
     conflict: result.conflict.length,
     orphaned: result.orphaned.length,
+    local: result.local.length,
   }
-  counts.total = counts.new + counts.unchanged + counts.changed + counts.conflict + counts.orphaned
+  counts.total =
+    counts.new +
+    counts.unchanged +
+    counts.changed +
+    counts.conflict +
+    counts.orphaned +
+    counts.local
 
   return { ...result, counts }
 }

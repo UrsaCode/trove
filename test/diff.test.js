@@ -80,3 +80,34 @@ describe('diffConversation', () => {
     expect(d.counts.new).toBe(1)
   })
 })
+
+describe('files Trove made itself', () => {
+  const local = (over = {}) => ({ path: '/local/shot.png', origin: 'local', ...over })
+
+  it('are never called orphaned just for being absent upstream', () => {
+    expect(classifyFile(null, local())).toBe(STATES.LOCAL)
+  })
+
+  it('stay local even when a path happens to match upstream', () => {
+    expect(classifyFile({ size: 1, created_at: 't' }, local({ remoteSize: 9 }))).toBe(STATES.LOCAL)
+  })
+
+  it('are bucketed separately from orphans', () => {
+    const d = diffConversation(
+      [{ path: '/o/a.html', size: 1, created_at: 't' }],
+      [
+        { path: '/o/a.html', remoteSize: 1, remoteCreatedAt: 't', edited: false },
+        local(),
+        { path: '/o/gone.html', remoteSize: 5, remoteCreatedAt: 't', edited: false },
+      ],
+    )
+    expect(d.local.map((f) => f.path)).toEqual(['/local/shot.png'])
+    expect(d.orphaned.map((f) => f.path)).toEqual(['/o/gone.html'])
+    expect(d.counts.local).toBe(1)
+  })
+
+  it('are counted in the total', () => {
+    const d = diffConversation([], [local()])
+    expect(d.counts.total).toBe(1)
+  })
+})

@@ -66,6 +66,25 @@ function injectStyles() {
     .cfv-dot {
       width: 6px; height: 6px; border-radius: 50%;
       background: currentColor; opacity: 0.9;
+      flex: 0 0 auto;
+      transition: width 120ms ease-out, height 120ms ease-out;
+    }
+    /*
+     * Working state. An ellipsis read as punctuation rather than as progress,
+     * so the marker becomes a turning ring and the button dims.
+     */
+    .cfv-btn[data-busy="true"] { opacity: .8; cursor: progress }
+    .cfv-btn[data-busy="true"] .cfv-dot {
+      width: 10px; height: 10px;
+      background: none;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-right-color: transparent;
+      animation: cfv-spin .6s linear infinite;
+    }
+    @keyframes cfv-spin { to { transform: rotate(360deg) } }
+    @media (prefers-reduced-motion: reduce) {
+      .cfv-btn[data-busy="true"] .cfv-dot { animation: none }
     }
     .cfv-picker {
       position: absolute;
@@ -229,8 +248,8 @@ export function mountCards({ getEntries, getStates, getCachedStates = () => null
       boundPath = match.path
 
       if (!boundPath) {
-        label.textContent = 'Keep…'
-        button.title = 'Choose which file this card refers to'
+        label.textContent = 'Pick file'
+        button.title = 'Trove could not tell which file this card is - choose it'
         button.dataset.state = 'new'
         return
       }
@@ -243,20 +262,24 @@ export function mountCards({ getEntries, getStates, getCachedStates = () => null
       event.stopPropagation()
       const previous = label.textContent
       button.disabled = true
-      label.textContent = 'Keeping…'
+      button.dataset.busy = 'true'
+      label.textContent = 'Keeping'
       try {
         const path = boundPath ?? (await pickFile(button, await getEntries()))
         if (!path) {
+          delete button.dataset.busy
           label.textContent = previous
           button.disabled = false
           return
         }
         await onCapture(path)
+        delete button.dataset.busy
         // Success is a state change on the row, not a toast. Repaint every
         // card, not just this one: keeping one file can change what the
         // conversation's other cards should offer.
         await refreshAll()
       } catch (error) {
+        delete button.dataset.busy
         label.textContent = 'Failed'
         button.title = error?.message ?? 'Capture failed'
         button.disabled = false

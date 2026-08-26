@@ -338,6 +338,16 @@ body {
 
 .trow {
   all: unset;
+  /*
+   * A button sizes width:auto to its content, not its container, even as a
+   * grid - and `all: unset` also discards the universal border-box. Without
+   * both of these the row laid out at its content width while the header
+   * filled the table, so the two grids resolved different tracks and the
+   * columns drifted apart. It only showed once the preview pane could be
+   * closed and the table got wide enough for the gap to be obvious.
+   */
+  width: 100%;
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 66px 84px minmax(196px, 232px);
   align-items: center;
@@ -347,6 +357,21 @@ body {
   border-bottom: 1px solid var(--rule);
   border-left: 2px solid transparent;
   transition: background var(--motion);
+}
+
+/*
+ * The body scrolls and the header does not, so the header has to leave room
+ * for the scrollbar or the last column sits proud of the rows beneath it.
+ */
+.thead {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  scrollbar-width: none;
+}
+
+.thead::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .trow:hover {
