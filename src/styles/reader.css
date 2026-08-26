@@ -232,3 +232,143 @@ body.full-screen .paper {
 .open-conv:hover {
   color: var(--tether);
 }
+
+/* ── Name row, with rename in place ────────────────────────────────────── */
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.file-glyph {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+}
+
+.name {
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin-left: -4px;
+  cursor: text;
+  outline: none;
+}
+
+.name:hover {
+  background: var(--raise);
+}
+
+.name.editing {
+  background: var(--raise2);
+  box-shadow: inset 0 0 0 1px var(--tether);
+}
+
+/* A renamed file says so, so the label is never mistaken for the filename. */
+.renamed-flag {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: var(--raise2);
+  color: var(--dim);
+  font: 400 var(--t-10) / 1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Details ───────────────────────────────────────────────────────────── */
+
+.details {
+  flex: 0 0 320px;
+  margin-left: var(--s4);
+  overflow-y: auto;
+  padding: var(--s4);
+  border-radius: 3px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+}
+
+.details-head {
+  margin-bottom: var(--s3);
+}
+
+.details-list {
+  display: grid;
+  grid-template-columns: auto;
+  gap: 0;
+  margin: 0;
+}
+
+.details-list dt {
+  margin-top: var(--s3);
+  color: var(--dimmer);
+  font-size: var(--t-10);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.details-list dt:first-child {
+  margin-top: 0;
+}
+
+.details-list dd {
+  margin: 3px 0 0;
+  color: var(--bone);
+  font-size: var(--t-11);
+  overflow-wrap: anywhere;
+}
+
+/* ── Full-screen hatch ─────────────────────────────────────────────────── */
+
+/*
+ * The one affordance full screen keeps. Without a way out and a way to capture
+ * what you are looking at, the mode would be a trap rather than a view - so it
+ * arrives on approach and leaves again on its own.
+ */
+.escape-hatch {
+  position: fixed;
+  top: var(--s3);
+  right: var(--s3);
+  z-index: 40;
+  display: flex;
+  gap: var(--s2);
+  padding: var(--s2);
+  border-radius: var(--r);
+  background: rgba(14, 16, 20, 0.86);
+  border: 1px solid var(--rule);
+  backdrop-filter: blur(6px);
+  transition: opacity var(--motion);
+}
+
+body:not(.full-screen) .escape-hatch {
+  display: none;
+}
+
+/* While capturing, nothing of ours is on screen - including the hatch. */
+body.shooting .escape-hatch,
+body.shooting .band,
+body.shooting .savebar,
+body.shooting .details {
+  display: none !important;
+}
+
+body.shooting .stage {
+  padding: 0;
+}
+
+body.shooting .paper {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/*
+ * Same trap as full screen: with the bands hidden the stage becomes the only
+ * grid item and auto-placement drops it into the first track, which is `auto`.
+ * An auto-height row hands the nested iframe its 150px default, so a
+ * screenshot would capture a thin strip instead of the document.
+ */
+body.shooting .reader {
+  grid-template-rows: 1fr;
+}

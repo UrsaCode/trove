@@ -20,9 +20,14 @@ import { confirmDeleteConversation } from '../ui/dialog.js'
 import { exportConversation } from './export.js'
 import { renderInSandbox } from './preview.js'
 import { mark } from '../ui/mark.js'
+import { fileIcon } from '../ui/file-icon.js'
+import { displayName, displayTitle, isRenamed, normaliseName } from '../lib/naming.js'
+import { getSettings, setSetting, resetSettings, DEFAULTS } from '../lib/settings.js'
+import { putFile, getFile } from '../lib/db.js'
 
 const el = (id) => document.getElementById(id)
 const state = { convId: null, filter: 'all', query: '', selected: null }
+let settings = { ...DEFAULTS }
 
 /** Object URLs for row thumbnails, revoked whenever the table is rebuilt. */
 let thumbUrls = []
@@ -113,11 +118,70 @@ function tile(file) {
     img.alt = ''
     box.appendChild(img)
   } else {
-    const glyph = document.createElement('span')
-    glyph.className = 'glyph'
-    box.appendChild(glyph)
+    // Not an image, so show what kind of file it is rather than a blank tile.
+    box.appendChild(fileIcon({ ext: file.ext, mime: file.mime, category: fileCategory(file.ext) }, 16))
+    box.dataset.glyph = 'true'
   }
   return box
+}
+
+/**
+ * Rename in place.
+ *
+ * The label is the only thing a rename touches - a file is still identified by
+ * its sandbox path and a conversation by its uuid - so editing the label where
+ * it sits is the honest interaction. Blank restores the original.
+ */
+function editableLabel(node, { current, original, onCommit }) {
+  if (node.isContentEditable) return
+  const before = current
+
+  node.contentEditable = 'plaintext-only'
+  node.classList.add('editing')
+  node.focus()
+  getSelection()?.selectAllChildren(node)
+
+  const finish = async (commit) => {
+    node.contentEditable = 'false'
+    node.classList.remove('editing')
+    node.removeEventListener('keydown', onKey)
+    node.removeEventListener('blur', onBlur)
+    if (!commit) {
+      node.textContent = before
+      return
+    }
+    const typed = normaliseName(node.textContent, { fallback: '' })
+    await onCommit(typed && typed !== original ? typed : '')
+  }
+
+  const onKey = (event) => {
+    event.stopPropagation()
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      finish(true)
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      finish(false)
+    }
+  }
+  const onBlur = () => finish(true)
+
+  node.addEventListener('keydown', onKey)
+  node.addEventListener('blur', onBlur)
+}
+
+async function renameConversation(conversation, renamedTo) {
+  await putConversation({ ...conversation, renamedTo, updatedAt: conversation.updatedAt })
+  await render()
+}
+
+async function renameFile(file, renamedTo) {
+  const stored = await getFile(file.id)
+  if (!stored) return
+  await putFile({ ...stored, renamedTo, updatedAt: Date.now() })
+  await render()
+  if (state.selected?.id === file.id) el('detail-name').textContent = renamedTo || stored.name
 }
 
 // ── Rail ──────────────────────────────────────────────────────────────────
@@ -149,7 +213,7 @@ async function renderRail() {
       dot.className = 'moved-dot'
       title.appendChild(dot)
     }
-    title.appendChild(document.createTextNode(conversation.title))
+    title.appendChild(document.createTextNode(displayTitle(conversation)))
 
     const sub = document.createElement('div')
     sub.className = 'rail-sub mono'
@@ -161,6 +225,34 @@ async function renderRail() {
 
     // Discoverable on hover or keyboard focus, rather than hidden behind a
     // right-click nobody would think to try.
+    title.addEventListener('dblclick', (event) => {
+      event.stopPropagation()
+      editableLabel(title, {
+        current: displayTitle(conversation),
+        original: conversation.title,
+        onCommit: (renamedTo) => renameConversation(conversation, renamedTo),
+      })
+    })
+
+    const rename = document.createElement('span')
+    rename.className = 'rail-remove rail-rename'
+    rename.setAttribute('role', 'button')
+    rename.setAttribute('tabindex', '0')
+    rename.title = 'Rename this conversation'
+    rename.textContent = '✎'
+    const onRename = (event) => {
+      event.stopPropagation()
+      editableLabel(title, {
+        current: displayTitle(conversation),
+        original: conversation.title,
+        onCommit: (renamedTo) => renameConversation(conversation, renamedTo),
+      })
+    }
+    rename.addEventListener('click', onRename)
+    rename.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') onRename(event)
+    })
+
     const save = document.createElement('span')
     save.className = 'rail-remove rail-save'
     save.setAttribute('role', 'button')
@@ -181,7 +273,7 @@ async function renderRail() {
     remove.className = 'rail-remove'
     remove.setAttribute('role', 'button')
     remove.setAttribute('tabindex', '0')
-    remove.title = `Delete ${conversation.title}`
+    remove.title = `Delete ${displayTitle(conversation)}`
     remove.textContent = '×'
     const onRemove = (event) => {
       event.stopPropagation()
@@ -192,7 +284,7 @@ async function renderRail() {
       if (event.key === 'Enter' || event.key === ' ') onRemove(event)
     })
 
-    item.append(text, save, remove)
+    item.append(text, rename, save, remove)
     item.addEventListener('click', () => {
       state.convId = conversation.id
       render()
@@ -220,7 +312,7 @@ async function collectFiles() {
 function matches(file) {
   if (state.filter !== 'all' && fileCategory(file.ext) !== state.filter) return false
   if (!state.query) return true
-  const haystack = `${file.name} ${file.ext} ${file.conversation?.title ?? ''}`.toLowerCase()
+  const haystack = `${displayName(file)} ${file.name} ${file.ext} ${displayTitle(file.conversation)}`.toLowerCase()
   return haystack.includes(state.query)
 }
 
@@ -247,10 +339,20 @@ async function renderTable() {
     text.style.minWidth = '0'
     const name = document.createElement('div')
     name.className = 'file-name'
-    name.textContent = file.name
+    name.textContent = displayName(file)
+    name.title = 'Double-click to rename'
+    name.addEventListener('dblclick', (event) => {
+      event.stopPropagation()
+      editableLabel(name, {
+        current: displayName(file),
+        original: file.name,
+        onCommit: (renamedTo) => renameFile(file, renamedTo),
+      })
+    })
+    if (isRenamed(file)) name.dataset.renamed = 'true'
     const conv = document.createElement('div')
     conv.className = 'file-conv'
-    conv.textContent = file.conversation?.title ?? ''
+    conv.textContent = displayTitle(file.conversation)
     text.append(name, conv)
     fileCell.append(tile(file), text)
 
@@ -280,7 +382,10 @@ async function renderTable() {
 
     row.append(fileCell, size, when, source)
     row.setAttribute('aria-selected', String(file.id === state.selected?.id))
-    row.addEventListener('click', () => select(file))
+    row.addEventListener('click', () => {
+      if (settings.openOnClick === 'reader') open(file)
+      else select(file)
+    })
     row.addEventListener('dblclick', () => open(file))
     body.appendChild(row)
   }
@@ -312,14 +417,14 @@ function paintDetailTether(file) {
   } else if (file.edited) {
     label.textContent = 'edited locally'
   } else {
-    label.textContent = `tethered to ${file.conversation?.title ?? 'its conversation'}`
+    label.textContent = `tethered to ${displayTitle(file.conversation) || 'its conversation'}`
   }
 }
 
 async function select(file) {
   state.selected = file
   el('split').dataset.detail = 'on'
-  el('detail-name').textContent = file.name
+  el('detail-name').textContent = displayName(file)
   el('full-screen').disabled = false
   el('open-reader').disabled = false
   paintDetailTether(file)
@@ -328,7 +433,7 @@ async function select(file) {
     row.setAttribute('aria-selected', 'false')
   }
   const index = [...el('rows').querySelectorAll('.trow')].findIndex((r) =>
-    r.querySelector('.file-name')?.textContent === file.name,
+    r.querySelector('.file-name')?.textContent === displayName(file),
   )
   if (index >= 0) el('rows').querySelectorAll('.trow')[index].setAttribute('aria-selected', 'true')
 
@@ -389,12 +494,14 @@ async function removeConversation(convId) {
   const [conversation, files] = await Promise.all([getConversation(convId), listFiles(convId)])
   if (!conversation) return
 
-  const ok = await confirmDeleteConversation({
-    title: conversation.title,
-    fileCount: files.length,
-    editedCount: files.filter((f) => f.edited).length,
-  })
-  if (!ok) return
+  if (settings.confirmDelete) {
+    const ok = await confirmDeleteConversation({
+      title: displayTitle(conversation),
+      fileCount: files.length,
+      editedCount: files.filter((f) => f.edited).length,
+    })
+    if (!ok) return
+  }
 
   await deleteConversation(convId)
   if (state.convId === convId) state.convId = null
@@ -431,6 +538,107 @@ async function refreshRemoteState() {
     }
   }
   if (changed) await render()
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────
+
+const SETTING_FIELDS = [
+  {
+    key: 'autoCapture',
+    label: 'Catch files as Claude writes them',
+    hint: 'Trove pulls new and changed files without being asked. Off by default, because writing to your library should be something you chose.',
+  },
+  {
+    key: 'openOnClick',
+    label: 'Clicking a file',
+    hint: 'Preview keeps you in the list. Reader opens the file in its own tab.',
+    options: [
+      ['preview', 'Previews it here'],
+      ['reader', 'Opens the Reader'],
+    ],
+  },
+  {
+    key: 'defaultView',
+    label: 'The Reader opens on',
+    hint: 'Files with nothing to render always open on Source regardless.',
+    options: [
+      ['render', 'Render'],
+      ['source', 'Source'],
+    ],
+  },
+  { key: 'wrapLines', label: 'Wrap long lines when editing' },
+  {
+    key: 'confirmDelete',
+    label: 'Ask before deleting',
+    hint: 'Trove keeps no version history, so deleting is final. Turning this off is for people who would rather not be asked twice.',
+  },
+  {
+    key: 'captureUnchanged',
+    label: 'Capture files that have not changed',
+    hint: 'Off means a whole-conversation capture only fetches what is new or has moved on.',
+  },
+]
+
+function buildSettings() {
+  const body = el('settings-body')
+  body.textContent = ''
+
+  for (const field of SETTING_FIELDS) {
+    const row = document.createElement('div')
+    row.className = 'setting'
+
+    const text = document.createElement('div')
+    text.className = 'setting-text'
+    const label = document.createElement('div')
+    label.className = 'setting-label'
+    label.textContent = field.label
+    text.appendChild(label)
+    if (field.hint) {
+      const hint = document.createElement('div')
+      hint.className = 'setting-hint'
+      hint.textContent = field.hint
+      text.appendChild(hint)
+    }
+
+    let control
+    if (field.options) {
+      control = document.createElement('div')
+      control.className = 'seg'
+      for (const [value, text_] of field.options) {
+        const option = document.createElement('button')
+        option.textContent = text_
+        option.setAttribute('aria-selected', String(settings[field.key] === value))
+        option.addEventListener('click', async () => {
+          await setSetting(field.key, value)
+          settings = await getSettings()
+          buildSettings()
+          await renderTable()
+        })
+        control.appendChild(option)
+      }
+    } else {
+      control = document.createElement('input')
+      control.type = 'checkbox'
+      control.className = 'setting-toggle'
+      control.checked = Boolean(settings[field.key])
+      control.setAttribute('aria-label', field.label)
+      control.addEventListener('change', async () => {
+        await setSetting(field.key, control.checked)
+        settings = await getSettings()
+      })
+    }
+
+    row.append(text, control)
+    body.appendChild(row)
+  }
+}
+
+function toggleSettings(open) {
+  const panel = el('settings-panel')
+  const show = open ?? panel.classList.contains('hidden')
+  panel.classList.toggle('hidden', !show)
+  el('settings-button').setAttribute('aria-pressed', String(show))
+  if (show) buildSettings()
 }
 
 // ── Render ────────────────────────────────────────────────────────────────
@@ -473,4 +681,24 @@ el('filters').addEventListener('click', (event) => {
 // Reader tabs write to the same database; refresh when focus comes back.
 window.addEventListener('focus', render)
 
-render().then(refreshRemoteState)
+el('settings-button').addEventListener('click', () => toggleSettings())
+el('settings-close').addEventListener('click', () => toggleSettings(false))
+el('settings-reset').addEventListener('click', async () => {
+  await resetSettings()
+  settings = await getSettings()
+  buildSettings()
+  await renderTable()
+})
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !el('settings-panel').classList.contains('hidden')) {
+    toggleSettings(false)
+  }
+})
+
+getSettings()
+  .then((loaded) => {
+    settings = loaded
+  })
+  .then(render)
+  .then(refreshRemoteState)

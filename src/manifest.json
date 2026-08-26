@@ -4,7 +4,7 @@
   "version": "0.2.0",
   "description": "Files Claude wrote, kept. Capture, read, edit and re-pull the files from a conversation.",
 
-  "permissions": ["storage", "unlimitedStorage", "tabs"],
+  "permissions": ["storage", "unlimitedStorage", "tabs", "activeTab"],
   "host_permissions": ["https://claude.ai/*"],
 
   "background": {

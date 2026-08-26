@@ -531,3 +531,134 @@ body {
   font-size: var(--t-13);
   line-height: 1.6;
 }
+
+/* ── Rename in place ───────────────────────────────────────────────────── */
+
+.rail-title.editing,
+.file-name.editing {
+  background: var(--raise2);
+  box-shadow: inset 0 0 0 1px var(--tether);
+  border-radius: 3px;
+  padding: 0 3px;
+  outline: none;
+  white-space: normal;
+  overflow: visible;
+}
+
+.rail-rename:hover {
+  background: var(--raise2);
+  color: var(--bone);
+}
+
+/* A renamed file keeps a quiet mark, so a label is never taken for a filename. */
+.file-name[data-renamed='true']::after {
+  content: '·';
+  margin-left: 6px;
+  color: var(--tether);
+}
+
+.tile[data-glyph='true'] {
+  color: var(--dim);
+  background: transparent;
+  border-color: transparent;
+}
+
+/* ── Settings ──────────────────────────────────────────────────────────── */
+
+.rail-settings {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  cursor: pointer;
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--rule);
+  color: var(--dim);
+  font-size: var(--t-12);
+  transition: background var(--motion), color var(--motion);
+}
+
+.rail-settings:hover,
+.rail-settings[aria-pressed='true'] {
+  background: var(--raise);
+  color: var(--bone);
+}
+
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  width: min(440px, 100vw);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--panel);
+  border-left: 1px solid var(--rule);
+  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.5);
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.settings-head .eyebrow {
+  flex: 1;
+}
+
+.settings-body {
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--s2) var(--s4);
+}
+
+.setting {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s4);
+  padding: var(--s4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.setting:last-child {
+  border-bottom: 0;
+}
+
+.setting-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-label {
+  color: var(--bone);
+  font-size: var(--t-13);
+}
+
+.setting-hint {
+  margin-top: 4px;
+  color: var(--dim);
+  font-size: var(--t-11);
+  line-height: 1.55;
+}
+
+.setting-toggle {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  accent-color: var(--tether);
+  cursor: pointer;
+}
+
+.setting .seg {
+  flex: 0 0 auto;
+}
+
+.settings-foot {
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--rule);
+  color: var(--dimmer);
+  font-size: var(--t-10);
+}

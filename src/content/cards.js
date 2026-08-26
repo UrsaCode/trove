@@ -167,6 +167,20 @@ function pickFile(anchorEl, entries) {
 export function mountCards({ getEntries, getStates, onCapture }) {
   injectStyles()
 
+  /**
+   * Every mounted card's repaint function.
+   *
+   * A capture started anywhere - another card, the popup, the library -
+   * changes what every card should say. Each card used to decide its label
+   * once at mount and never revisit it, which is why buttons stayed on "Keep"
+   * until the page was reloaded.
+   */
+  const painters = new Set()
+
+  async function refreshAll() {
+    await Promise.all([...painters].map((paint) => paint().catch(() => {})))
+  }
+
   async function decorate(cardEl) {
     if (cardEl.hasAttribute(MARK)) return
     cardEl.setAttribute(MARK, '1')
@@ -189,7 +203,7 @@ export function mountCards({ getEntries, getStates, onCapture }) {
       boundPath = match.path
 
       if (!boundPath) {
-        label.textContent = 'Save…'
+        label.textContent = 'Keep…'
         button.title = 'Choose which file this card refers to'
         button.dataset.state = 'new'
         return
@@ -209,7 +223,7 @@ export function mountCards({ getEntries, getStates, onCapture }) {
       event.stopPropagation()
       const previous = label.textContent
       button.disabled = true
-      label.textContent = 'Saving…'
+      label.textContent = 'Keeping…'
       try {
         const path = boundPath ?? (await pickFile(button, await getEntries()))
         if (!path) {
@@ -218,15 +232,18 @@ export function mountCards({ getEntries, getStates, onCapture }) {
           return
         }
         await onCapture(path)
-        // Success is a state change on the row, not a toast.
-        label.textContent = 'Saved'
-        button.dataset.state = 'unchanged'
+        // Success is a state change on the row, not a toast. Repaint every
+        // card, not just this one: keeping one file can change what the
+        // conversation's other cards should offer.
+        await refreshAll()
       } catch (error) {
         label.textContent = 'Failed'
         button.title = error?.message ?? 'Capture failed'
         button.disabled = false
       }
     })
+
+    painters.add(refresh)
 
     // The cell is a `justify-between` flex row: content first, actions last.
     // Use lastElementChild, not a `:last-child` selector - the latter matches
@@ -253,5 +270,8 @@ export function mountCards({ getEntries, getStates, onCapture }) {
   observer.observe(document.body, { childList: true, subtree: true })
   scan()
 
-  return () => observer.disconnect()
+  return {
+    refreshAll,
+    stop: () => observer.disconnect(),
+  }
 }

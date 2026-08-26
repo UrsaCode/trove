@@ -9,6 +9,14 @@ export const MSG = Object.freeze({
   CAPTURE_ALL: 'capture-all',
   CAPTURE_FILE: 'capture-file',
   LIST_STATUS: 'list-status',
+  /**
+   * Re-read every card's state from storage and repaint.
+   *
+   * Needed because a capture started anywhere - another card, the popup, the
+   * library - changes what every other card should say. Without it a card
+   * keeps whatever it decided when it was first decorated.
+   */
+  REFRESH_CARDS: 'refresh-cards',
 
   // Content script -> service worker
   SAVE_FILES: 'save-files',
@@ -19,6 +27,8 @@ export const MSG = Object.freeze({
   GET_STATUS: 'get-status',
   // Non-intrusive: answers only from a tab the user already has open.
   PEEK: 'peek',
+  /** Capture the calling tab. Only the worker can reach captureVisibleTab. */
+  SCREENSHOT: 'screenshot',
 })
 
 /** Namespaced marker for window.postMessage traffic from the main world. */

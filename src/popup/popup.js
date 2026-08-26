@@ -4,6 +4,10 @@
  * Copy rule: never says "artifact", "sandbox", or "output directory". It says
  * file, and it says where the file came from. The mechanism is the
  * extension's problem, not the reader's.
+ *
+ * Every row carries its own action and its own progress. Capturing runs one
+ * file at a time so that progress is real rather than a spinner standing in
+ * for a batch whose state nobody can see.
  */
 
 import { MSG } from '../lib/messages.js'
@@ -11,14 +15,24 @@ import { listFiles, listConversations, contentSize } from '../lib/db.js'
 import { diffConversation, STATES } from '../lib/diff.js'
 import { getSettings, setSetting } from '../lib/settings.js'
 import { conversationIdFromUrl } from '../lib/signal.js'
+import { fileCategory } from '../lib/paths.js'
 import { mark } from '../ui/mark.js'
+import { fileIcon } from '../ui/file-icon.js'
 
 const el = (id) => document.getElementById(id)
 const FRESH_MS = 5 * 60 * 1000
 
 let tabId = null
 let convId = null
-let thumbUrls = []
+
+/** Paths the user has ticked. Actionable rows start ticked. */
+let selected = new Set()
+/** Rows by path, so a capture can repaint exactly the row it finished. */
+const rows = new Map()
+let lastDiff = null
+let storedByPath = new Map()
+
+// ── Formatting ────────────────────────────────────────────────────────────
 
 function bytes(n) {
   if (!n) return '0 B'
@@ -36,8 +50,12 @@ function ago(ms) {
   return `${Math.floor(seconds / 86400)}d ago`
 }
 
+/** A path is actionable when keeping it would actually change something. */
+const isActionable = (state) => state === STATES.NEW || state === STATES.CHANGED
+
 function message(heading, body, action) {
   el('list').textContent = ''
+  el('selectbar').classList.add('hidden')
   const wrap = document.createElement('div')
   wrap.className = 'message'
 
@@ -51,22 +69,34 @@ function message(heading, body, action) {
   el('list').appendChild(wrap)
 }
 
-function tile(file) {
-  const box = document.createElement('div')
-  box.className = 'tile'
-  if (file.kind === 'binary' && file.mime?.startsWith('image/') && file.content instanceof Blob) {
-    const url = URL.createObjectURL(file.content)
-    thumbUrls.push(url)
-    const img = document.createElement('img')
-    img.src = url
-    img.alt = ''
-    box.appendChild(img)
+// ── Status ────────────────────────────────────────────────────────────────
+
+/**
+ * The pill reports the outcome, not the mode.
+ *
+ * It used to read "Capturing" for any conversation with nothing pending, which
+ * said the same thing whether every file was already kept or none were. What a
+ * reader wants from this slot is whether anything needs doing.
+ */
+function paintStatus(diff) {
+  const status = el('status')
+  const { counts } = diff
+  const moved = counts.changed + counts.conflict
+
+  status.classList.remove('hidden')
+
+  if (moved > 0) {
+    status.dataset.state = 'moved'
+    el('status-text').textContent = `${moved} newer`
+  } else if (counts.new > 0) {
+    status.dataset.state = 'live'
+    el('status-text').textContent = `${counts.new} to keep`
+  } else if (counts.total > 0) {
+    status.dataset.state = 'kept'
+    el('status-text').textContent = 'All kept'
   } else {
-    const glyph = document.createElement('span')
-    glyph.className = 'glyph'
-    box.appendChild(glyph)
+    status.classList.add('hidden')
   }
-  return box
 }
 
 function paintTether({ counts }) {
@@ -77,96 +107,192 @@ function paintTether({ counts }) {
   if (moved > 0) {
     tether.dataset.state = 'moved'
     label.textContent = `${moved} of ${counts.total} moved on`
-    el('repull-chip').classList.remove('hidden')
+    return
+  }
+  tether.removeAttribute('data-state')
+  label.textContent =
+    counts.new > 0
+      ? `${counts.unchanged} of ${counts.total} kept`
+      : `${counts.total} ${counts.total === 1 ? 'file' : 'files'} · this tab`
+}
+
+// ── Rows ──────────────────────────────────────────────────────────────────
+
+function subtitleFor(entry, stored) {
+  if (entry.state === STATES.CHANGED || entry.state === STATES.CONFLICT) {
+    return { text: 'newer version in the conversation', state: 'moved' }
+  }
+  if (entry.state === STATES.NEW) return { text: `${bytes(entry.size)} · not kept yet`, state: null }
+  return { text: `${bytes(contentSize(stored?.content))} · ${ago(stored?.capturedAt)}`, state: null }
+}
+
+function buildRow(entry) {
+  const stored = storedByPath.get(entry.path)
+  const actionable = isActionable(entry.state)
+  const name = entry.name ?? entry.path.split('/').pop()
+  const ext = name.split('.').pop() ?? ''
+
+  const item = document.createElement('div')
+  item.className = 'item'
+  item.dataset.state = entry.state
+  item.dataset.fresh = String(Boolean(stored && Date.now() - stored.capturedAt < FRESH_MS))
+
+  // Tick box, only where ticking it would do something.
+  const box = document.createElement('input')
+  box.type = 'checkbox'
+  box.className = 'row-check'
+  box.checked = selected.has(entry.path)
+  box.disabled = !actionable
+  box.setAttribute('aria-label', `Select ${name}`)
+  box.addEventListener('change', () => {
+    if (box.checked) selected.add(entry.path)
+    else selected.delete(entry.path)
+    paintSelection()
+  })
+
+  const icon = document.createElement('span')
+  icon.className = 'item-icon'
+  icon.appendChild(fileIcon({ ext, mime: entry.mime, category: fileCategory(ext) }, 16))
+
+  const body = document.createElement('div')
+  body.className = 'item-body'
+
+  const title = document.createElement('div')
+  title.className = 'item-name'
+  title.textContent = name
+
+  const sub = document.createElement('div')
+  sub.className = 'item-sub'
+  const subtitle = subtitleFor(entry, stored)
+  sub.textContent = subtitle.text
+  if (subtitle.state) sub.dataset.state = subtitle.state
+
+  body.append(title, sub)
+
+  const action = document.createElement('button')
+  action.className = 'row-action'
+  if (actionable) {
+    action.textContent = entry.state === STATES.NEW ? 'Keep' : 'Re-pull'
+    action.addEventListener('click', () => captureOne(entry.path))
+  } else if (entry.state === STATES.CONFLICT) {
+    action.textContent = 'Edited'
+    action.disabled = true
+    action.title = 'You edited this copy. Re-pull it from the library, where the warning lives.'
   } else {
-    tether.removeAttribute('data-state')
-    const kept = counts.unchanged
-    label.textContent =
-      counts.new > 0 ? `${kept} of ${counts.total} kept` : `${counts.total} files · this tab`
-    el('repull-chip').classList.add('hidden')
+    action.textContent = 'Kept'
+    action.disabled = true
   }
+
+  const ext_chip = document.createElement('span')
+  ext_chip.className = 'ext'
+  ext_chip.textContent = ext
+
+  item.append(box, icon, body, ext_chip, action)
+
+  rows.set(entry.path, { item, action, sub, box })
+  return item
 }
 
-/**
- * The status pill has to describe what Trove is actually doing.
- *
- * "Capturing" is a claim about ongoing activity, so it only appears when
- * auto-capture is on and there is genuinely something to catch. With
- * auto-capture off - the default - Trove is watching, not capturing, and the
- * honest answer is to say nothing at all.
- */
-function paintStatus({ counts }, autoCapture) {
-  const status = el('status')
-  const moved = counts.changed + counts.conflict
-
-  if (moved > 0) {
-    status.classList.remove('hidden')
-    status.dataset.state = 'moved'
-    el('status-text').textContent = `${moved} newer`
-    return
-  }
-
-  if (autoCapture) {
-    status.classList.remove('hidden')
-    status.dataset.state = 'live'
-    el('status-text').textContent = 'Capturing'
-    return
-  }
-
-  status.classList.add('hidden')
-}
-
-function renderList(diff, storedByPath) {
-  for (const url of thumbUrls) URL.revokeObjectURL(url)
-  thumbUrls = []
+function renderList(diff) {
+  rows.clear()
   el('list').textContent = ''
 
   const ordered = [...diff.changed, ...diff.conflict, ...diff.new, ...diff.unchanged]
   if (!ordered.length) {
-    message('No files yet', 'This conversation hasn’t produced any files. Trove picks them up as Claude writes them.')
+    message(
+      'No files yet',
+      'This conversation hasn’t produced any files. Trove picks them up as Claude writes them.',
+    )
     return
   }
 
-  for (const entry of ordered) {
-    const stored = storedByPath.get(entry.path)
-    const item = document.createElement('div')
-    item.className = 'item'
-    item.dataset.fresh = String(Boolean(stored && Date.now() - stored.capturedAt < FRESH_MS))
+  for (const entry of ordered) el('list').appendChild(buildRow(entry))
 
-    const body = document.createElement('div')
-    body.className = 'item-body'
+  const actionable = ordered.filter((e) => isActionable(e.state))
+  el('selectbar').classList.toggle('hidden', actionable.length === 0)
+  paintSelection()
+}
 
-    const name = document.createElement('div')
-    name.className = 'item-name'
-    name.textContent = entry.path.split('/').pop()
+/** Keeps the select-all box, the count and the footer button in agreement. */
+function paintSelection() {
+  const actionable = (lastDiff ? [...lastDiff.new, ...lastDiff.changed] : []).map((e) => e.path)
+  const chosen = actionable.filter((path) => selected.has(path))
 
-    const sub = document.createElement('div')
-    sub.className = 'item-sub'
-    if (entry.state === STATES.CHANGED || entry.state === STATES.CONFLICT) {
-      sub.dataset.state = 'moved'
-      sub.textContent = 'newer version in the conversation'
-    } else if (entry.state === STATES.NEW) {
-      sub.textContent = `${bytes(entry.size)} · not kept yet`
-    } else {
-      sub.textContent = `${bytes(contentSize(stored?.content))} · ${ago(stored?.capturedAt)}`
+  const all = el('select-all')
+  all.checked = chosen.length > 0 && chosen.length === actionable.length
+  all.indeterminate = chosen.length > 0 && chosen.length < actionable.length
+  el('select-all-label').textContent = all.checked ? 'Select none' : 'Select all'
+  el('selected-count').textContent = `${chosen.length} of ${actionable.length} selected`
+
+  const capture = el('capture')
+  capture.classList.toggle('hidden', chosen.length === 0)
+  const newCount = (lastDiff?.new ?? []).filter((e) => selected.has(e.path)).length
+  capture.textContent = newCount === chosen.length ? `Keep ${chosen.length}` : `Update ${chosen.length}`
+}
+
+// ── Capturing ─────────────────────────────────────────────────────────────
+
+/** One file. Its own row shows its own progress. */
+async function captureOne(path) {
+  const row = rows.get(path)
+  if (row) {
+    row.item.dataset.busy = 'true'
+    row.action.disabled = true
+    row.action.textContent = '…'
+  }
+
+  try {
+    const result = await chrome.tabs.sendMessage(tabId, { type: MSG.CAPTURE_FILE, path })
+    if (result?.ok === false) throw new Error(result.error)
+    selected.delete(path)
+    return true
+  } catch (error) {
+    if (row) {
+      row.item.dataset.busy = 'false'
+      row.action.disabled = false
+      row.action.textContent = 'Retry'
+      row.action.title = error?.message ?? 'Keeping failed'
+      row.sub.dataset.state = 'moved'
+      row.sub.textContent = 'could not be kept'
     }
-
-    body.append(name, sub)
-
-    const ext = document.createElement('span')
-    ext.className = 'ext'
-    ext.textContent = entry.name?.split('.').pop() ?? ''
-
-    item.append(tile(stored ?? entry), body, ext)
-    el('list').appendChild(item)
+    return false
   }
 }
+
+/** The selected files, in order, repainting as each one lands. */
+async function captureSelected() {
+  const paths = [...selected]
+  const button = el('capture')
+  button.disabled = true
+
+  let done = 0
+  for (const path of paths) {
+    button.textContent = `Keeping ${done + 1} of ${paths.length}…`
+    if (await captureOne(path)) done++
+  }
+
+  button.disabled = false
+  // The conversation's cards were decided before this ran, so tell them to
+  // repaint rather than leaving them offering to keep what is already kept.
+  await refreshCards()
+  await load()
+}
+
+async function refreshCards() {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: MSG.REFRESH_CARDS })
+  } catch {
+    /* the tab may have gone; nothing to repaint */
+  }
+}
+
+// ── Loading ───────────────────────────────────────────────────────────────
 
 async function paintKept() {
   const conversations = await listConversations()
   const files = conversations.reduce((n, c) => n + (c.fileCount ?? 0), 0)
   el('kept').textContent = files
-    ? `${files} files kept · ${conversations.length} conversations`
+    ? `${files} kept · ${conversations.length} ${conversations.length === 1 ? 'conversation' : 'conversations'}`
     : 'Nothing kept yet'
 }
 
@@ -178,6 +304,7 @@ async function load() {
   convId = conversationIdFromUrl(tab?.url ?? '')
 
   if (!convId) {
+    el('status').classList.add('hidden')
     const action = document.createElement('button')
     action.className = 'btn'
     action.textContent = 'Open claude.ai'
@@ -194,7 +321,10 @@ async function load() {
   try {
     response = await chrome.tabs.sendMessage(tabId, { type: MSG.LIST_STATUS })
   } catch {
-    message('Reload the conversation', 'Trove couldn’t reach this tab. Reload the page and open this panel again.')
+    message(
+      'Reload the conversation',
+      'Trove couldn’t reach this tab. Reload the page and open this panel again.',
+    )
     return
   }
 
@@ -207,42 +337,35 @@ async function load() {
   el('conv-title').textContent = response.conversation?.title ?? 'This conversation'
 
   const stored = await listFiles(convId)
-  const storedByPath = new Map(stored.map((f) => [f.path, f]))
-  const diff = diffConversation(response.entries ?? [], stored)
+  storedByPath = new Map(stored.map((f) => [f.path, f]))
+  lastDiff = diffConversation(response.entries ?? [], stored)
 
-  const { autoCapture } = await getSettings()
-  paintStatus(diff, autoCapture)
-  paintTether({ counts: diff.counts })
-  renderList(diff, storedByPath)
+  // Anything worth doing starts ticked, so the common case is one click.
+  selected = new Set([...lastDiff.new, ...lastDiff.changed].map((e) => e.path))
 
-  const pending = diff.counts.new + diff.counts.changed
-  const capture = el('capture')
-  capture.classList.toggle('hidden', pending === 0)
-  capture.textContent = diff.counts.new && !diff.counts.changed ? `Keep ${pending}` : `Re-pull ${pending}`
+  paintStatus(lastDiff)
+  paintTether({ counts: lastDiff.counts })
+  renderList(lastDiff)
 }
 
-async function capture() {
-  el('capture').disabled = true
-  el('capture').textContent = 'Working…'
-  try {
-    await chrome.tabs.sendMessage(tabId, { type: MSG.CAPTURE_ALL })
-    await load()
-  } catch (error) {
-    el('capture').textContent = 'Failed'
-    el('capture').title = error?.message ?? ''
-  } finally {
-    el('capture').disabled = false
+// ── Wiring ────────────────────────────────────────────────────────────────
+
+el('capture').addEventListener('click', captureSelected)
+
+el('select-all').addEventListener('change', (event) => {
+  const actionable = (lastDiff ? [...lastDiff.new, ...lastDiff.changed] : []).map((e) => e.path)
+  selected = event.target.checked ? new Set(actionable) : new Set()
+  for (const path of actionable) {
+    const row = rows.get(path)
+    if (row) row.box.checked = selected.has(path)
   }
-}
+  paintSelection()
+})
 
-el('capture').addEventListener('click', capture)
-el('repull-chip').addEventListener('click', capture)
 el('open-library').addEventListener('click', () => chrome.runtime.openOptionsPage())
+
 el('auto').addEventListener('change', async (event) => {
   await setSetting('autoCapture', event.target.checked)
-  // Repaint immediately: the status pill is a claim about what Trove is doing
-  // right now, so it has to follow the toggle without waiting for a reopen.
-  await load()
 })
 
 getSettings().then((settings) => {

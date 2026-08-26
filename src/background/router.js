@@ -7,7 +7,8 @@
  */
 
 import { MSG } from '../lib/messages.js'
-import { putFile, putConversation, listFiles, contentSize } from '../lib/db.js'
+import { putFile, putConversation, listFiles, getFile, getConversation, contentSize } from '../lib/db.js'
+import { preserveUserFields } from '../lib/naming.js'
 
 export function createRouter({
   getSettings,
@@ -19,18 +20,26 @@ export function createRouter({
   const pending = new Map()
 
   async function saveFiles({ conversation, files = [] }) {
-    for (const file of files) await putFile(file)
+    for (const file of files) {
+      // A capture replaces content and upstream metadata by design, but the
+      // name and note belong to the user - re-pulling must not undo a rename.
+      const existing = await getFile(file.id)
+      await putFile(preserveUserFields(existing, file))
+    }
 
     // Recompute from storage rather than trusting the message: a partial
     // capture must not leave the conversation claiming files it lacks.
     const stored = await listFiles(conversation.id)
-    await putConversation({
-      ...conversation,
-      fileCount: stored.length,
-      bytes: stored.reduce((sum, f) => sum + contentSize(f.content), 0),
-      capturedAt: conversation.capturedAt ?? now(),
-      updatedAt: now(),
-    })
+    const existingConversation = await getConversation(conversation.id)
+    await putConversation(
+      preserveUserFields(existingConversation, {
+        ...conversation,
+        fileCount: stored.length,
+        bytes: stored.reduce((sum, f) => sum + contentSize(f.content), 0),
+        capturedAt: existingConversation?.capturedAt ?? conversation.capturedAt ?? now(),
+        updatedAt: now(),
+      }),
+    )
 
     return { ok: true, saved: files.length }
   }

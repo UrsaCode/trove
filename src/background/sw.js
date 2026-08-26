@@ -63,6 +63,20 @@ function waitForTabReady(tabId, timeoutMs = 20000) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   /*
+   * captureVisibleTab is only available to the worker, and only for the window
+   * the caller lives in. The sandboxed render frame has an opaque origin, so
+   * compositing the tab is the one way to get its pixels.
+   */
+  if (message?.type === MSG.SCREENSHOT) {
+    const windowId = sender.tab?.windowId
+    chrome.tabs
+      .captureVisibleTab(windowId, { format: 'png' })
+      .then((dataUrl) => sendResponse({ ok: true, dataUrl }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  /*
    * PEEK is deliberately not allowed to open a tab. It runs on every library
    * load to show which copies have fallen behind; opening background tabs for
    * that would be a surprising amount of activity for a passive check.

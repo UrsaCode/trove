@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createRouter } from '../src/background/router.js'
 import { MSG } from '../src/lib/messages.js'
-import { fileId, resetDbForTests, getConversation, listFiles } from '../src/lib/db.js'
+import {
+  fileId,
+  resetDbForTests,
+  getConversation,
+  putConversation,
+  putFile,
+  listFiles,
+} from '../src/lib/db.js'
 
 const CONV = 'conv-1'
 const SENDER = { tab: { id: 42 } }
@@ -197,5 +204,68 @@ describe('unknown messages', () => {
   it('tolerates a message with no type', async () => {
     const { handleMessage } = router()
     expect((await handleMessage({}, SENDER)).ok).toBe(false)
+  })
+})
+
+describe('preserving what the user owns', () => {
+  it('keeps a rename across a re-capture', async () => {
+    const { handleMessage } = router()
+    const conv = { id: CONV, title: 'T', orgId: 'o', url: 'u' }
+
+    await handleMessage(
+      { type: MSG.SAVE_FILES, conversation: conv, files: [fileMsg('/o/a.html', 'aaa')] },
+      SENDER,
+    )
+
+    // The user renames their copy.
+    const stored = (await listFiles(CONV))[0]
+    await putFile({ ...stored, renamedTo: 'Landing page' })
+
+    // The source moves on and the file is re-pulled.
+    await handleMessage(
+      { type: MSG.SAVE_FILES, conversation: conv, files: [fileMsg('/o/a.html', 'bbbb')] },
+      SENDER,
+    )
+
+    const after = (await listFiles(CONV))[0]
+    expect(after.content).toBe('bbbb')
+    expect(after.renamedTo).toBe('Landing page')
+  })
+
+  it('keeps a renamed conversation title across a re-capture', async () => {
+    const { handleMessage } = router()
+    const conv = { id: CONV, title: 'Original', orgId: 'o', url: 'u' }
+    await handleMessage(
+      { type: MSG.SAVE_FILES, conversation: conv, files: [fileMsg('/o/a.html', 'a')] },
+      SENDER,
+    )
+
+    const stored = await getConversation(CONV)
+    await putConversation({ ...stored, renamedTo: 'Fleet console' })
+
+    await handleMessage(
+      { type: MSG.SAVE_FILES, conversation: conv, files: [fileMsg('/o/a.html', 'ab')] },
+      SENDER,
+    )
+
+    const after = await getConversation(CONV)
+    expect(after.renamedTo).toBe('Fleet console')
+    expect(after.title).toBe('Original')
+  })
+
+  it('keeps the original capture time rather than resetting it', async () => {
+    const { handleMessage } = router()
+    const conv = { id: CONV, title: 'T', orgId: 'o', url: 'u' }
+    await handleMessage(
+      { type: MSG.SAVE_FILES, conversation: conv, files: [fileMsg('/o/a.html', 'a')] },
+      SENDER,
+    )
+    const first = (await getConversation(CONV)).capturedAt
+
+    await handleMessage(
+      { type: MSG.SAVE_FILES, conversation: conv, files: [fileMsg('/o/b.html', 'b')] },
+      SENDER,
+    )
+    expect((await getConversation(CONV)).capturedAt).toBe(first)
   })
 })

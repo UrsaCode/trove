@@ -91,40 +91,129 @@ body {
 .item {
   display: flex;
   align-items: center;
-  gap: var(--s3);
+  gap: var(--s2);
   padding: var(--s2) var(--s4);
   border-bottom: 1px solid var(--rule);
   border-left: 2px solid transparent;
+  transition: background var(--motion), opacity var(--motion);
+}
+
+.item:hover {
+  background: var(--raise);
+}
+
+.item[data-busy='true'] {
+  opacity: 0.55;
+}
+
+/* Divergence is the only state that colours a row's edge. */
+.item[data-state='changed'],
+.item[data-state='conflict'] {
+  border-left-color: var(--moved);
+}
+
+.row-check {
+  flex: 0 0 auto;
+  accent-color: var(--tether);
+  cursor: pointer;
+  margin: 0;
+}
+
+.row-check:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.item-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: var(--dim);
+}
+
+.item[data-state='changed'] .item-icon,
+.item[data-state='conflict'] .item-icon {
+  color: var(--moved);
+}
+
+/* Per-row action, so progress belongs to the file it describes. */
+.row-action {
+  all: unset;
+  flex: 0 0 auto;
+  cursor: pointer;
+  min-width: 52px;
+  text-align: center;
+  padding: 4px 9px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--rule);
+  background: var(--raise);
+  color: var(--bone);
+  font: 400 var(--t-10)/1.2 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background var(--motion), color var(--motion), border-color var(--motion);
+}
+
+.row-action:hover:not(:disabled) {
+  background: var(--tether);
+  border-color: transparent;
+  color: var(--ink);
+}
+
+.row-action:disabled {
+  cursor: default;
+  background: transparent;
+  border-color: transparent;
+  color: var(--dimmer);
+}
+
+.item[data-state='changed'] .row-action,
+.item[data-state='conflict'] .row-action {
+  border-color: var(--moved);
+  color: var(--moved);
+}
+
+.item[data-state='changed'] .row-action:hover {
+  background: var(--moved);
+  color: var(--ink);
+}
+
+/* Select-all bar. */
+.selectbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-11);
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.check input {
+  accent-color: var(--tether);
+  cursor: pointer;
+  margin: 0;
+}
+
+.selected-count {
+  margin-left: auto;
+  font-size: var(--t-10);
+  color: var(--dimmer);
 }
 
 /* Anything caught in the last few minutes wears a fresh mark. */
 .item[data-fresh='true'] {
   border-left-color: var(--tether);
-}
-
-.tile {
-  flex: 0 0 auto;
-  width: 30px;
-  height: 24px;
-  border-radius: 3px;
-  background: var(--raise2);
-  border: 1px solid var(--rule);
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-}
-
-.tile img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.tile .glyph {
-  width: 12px;
-  height: 9px;
-  border-top: 1.5px solid var(--dimmer);
-  border-bottom: 1.5px solid var(--dimmer);
 }
 
 .item-body {
@@ -159,6 +248,11 @@ body {
   font: 400 var(--t-10) / 1 var(--mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.pill[data-state='kept'] {
+  color: var(--dim);
+  background: rgba(124, 132, 146, 0.14);
 }
 
 /* ── Empty ─────────────────────────────────────────────────────────────── */

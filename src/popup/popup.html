@@ -20,7 +20,9 @@
         </svg>
         <span class="wordmark">Trove</span>
       </div>
-      <span class="pill hidden" id="status"><span class="dot"></span><span id="status-text"></span></span>
+      <span class="pill hidden" id="status"
+        ><span class="dot"></span><span id="status-text"></span
+      ></span>
     </header>
 
     <section class="conv hidden" id="conv">
@@ -29,16 +31,23 @@
         <div class="tether" id="tether">
           <span class="node"></span><span class="wire"></span><span class="lbl"></span>
         </div>
-        <button class="repull-chip hidden" id="repull-chip">Re-pull</button>
       </div>
     </section>
+
+    <div class="selectbar hidden" id="selectbar">
+      <label class="check">
+        <input type="checkbox" id="select-all" />
+        <span id="select-all-label">Select all</span>
+      </label>
+      <span class="selected-count mono" id="selected-count"></span>
+    </div>
 
     <div class="list" id="list"></div>
 
     <footer class="foot">
       <span class="mono kept" id="kept"></span>
-      <button class="btn" id="open-library">Open library</button>
-      <button class="btn btn-tether hidden" id="capture">Capture</button>
+      <button class="btn" id="open-library">Library</button>
+      <button class="btn btn-tether hidden" id="capture"></button>
     </footer>
 
     <div class="settings">

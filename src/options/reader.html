@@ -11,14 +11,23 @@
     <div class="reader">
       <!-- Band above. Nothing here ever touches the document. -->
       <header class="band band-top">
-        <button class="back btn-ghost" id="back" title="Back to library" aria-label="Back to library">
+        <button class="back" id="back" title="Back to library" aria-label="Back to library">
           &#8249;
         </button>
 
         <div class="ident">
-          <div class="name mono" id="name">
-            <span id="name-text"></span>
+          <div class="name-row">
+            <span class="file-glyph" id="glyph"></span>
+            <!-- Click to rename. The label is the user's; the path is not. -->
+            <span
+              class="name mono"
+              id="name-text"
+              role="textbox"
+              tabindex="0"
+              title="Click to rename"
+            ></span>
             <span class="dirty-dot hidden" id="dirty-dot" title="Unsaved changes"></span>
+            <span class="renamed-flag hidden" id="renamed-flag">renamed</span>
           </div>
           <div class="tether" id="tether">
             <span class="node"></span><span class="wire"></span><span class="lbl"></span>
@@ -31,9 +40,12 @@
             <button id="mode-source" role="tab" aria-selected="false">Source</button>
           </div>
           <button class="btn" id="wrap">Wrap lines</button>
+          <button class="btn" id="details" aria-pressed="false">Details</button>
+          <button class="btn" id="shot" title="Save a PNG of the rendered file">Screenshot</button>
           <button class="btn" id="export">Save a copy</button>
           <button class="btn" id="repull">Re-pull</button>
-          <button class="btn btn-sever" id="delete" title="Delete this file">Delete</button>
+          <button class="btn btn-sever" id="delete">Delete</button>
+          <button class="btn btn-tether" id="full">Full screen</button>
         </div>
       </header>
 
@@ -47,6 +59,10 @@
           sandbox="allow-scripts allow-forms allow-modals allow-popups"
         ></iframe>
         <div id="source" class="source hidden"></div>
+        <aside class="details hidden" id="details-panel" aria-label="File details">
+          <div class="details-head eyebrow">Details</div>
+          <dl class="details-list" id="details-list"></dl>
+        </aside>
       </main>
 
       <!-- Save bar, only while the text has diverged. -->
@@ -69,6 +85,12 @@
           Open conversation &#8599;
         </a>
       </footer>
+    </div>
+
+    <!-- Full screen keeps one affordance, and only on approach. -->
+    <div class="escape-hatch hidden" id="hatch">
+      <button class="btn" id="hatch-shot">Screenshot</button>
+      <button class="btn" id="hatch-exit">Exit full screen</button>
     </div>
 
     <script src="reader.js"></script>

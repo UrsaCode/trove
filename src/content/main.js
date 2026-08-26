@@ -17,6 +17,7 @@ const ORG_CACHE_KEY = 'cfv:orgId'
 
 let orgIdPromise = null
 let entriesCache = { convId: null, at: 0, entries: null }
+let cards = null
 
 function currentConvId() {
   return conversationIdFromUrl(location.href)
@@ -95,10 +96,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   ;(async () => {
     try {
       switch (message?.type) {
-        case MSG.CAPTURE_ALL:
-          return await capture(null, { onlyChanged: message.onlyChanged })
-        case MSG.CAPTURE_FILE:
-          return await capture([message.path])
+        case MSG.CAPTURE_ALL: {
+          const result = await capture(null, { onlyChanged: message.onlyChanged })
+          await cards?.refreshAll()
+          return result
+        }
+        case MSG.CAPTURE_FILE: {
+          const result = await capture([message.path])
+          await cards?.refreshAll()
+          return result
+        }
+        case MSG.REFRESH_CARDS:
+          // The listing itself may have moved on, so drop the cache first.
+          entriesCache = { convId: null, at: 0, entries: null }
+          await cards?.refreshAll()
+          return { ok: true }
         case MSG.LIST_STATUS: {
           const convId = currentConvId()
           if (!convId) return { ok: true, conversation: null, entries: [] }
@@ -132,7 +144,7 @@ window.addEventListener('message', (event) => {
 // -- Card buttons ----------------------------------------------------------
 
 if (currentConvId()) {
-  mountCards({
+  cards = mountCards({
     getEntries: () => entries(),
     getStates: () => stateByPath(currentConvId()),
     onCapture: (path) => capture([path]),
