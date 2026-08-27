@@ -1,26 +1,22 @@
-<div align="center">
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="Trove — the files Claude writes in a conversation, kept in a library you own, each still tethered to its source" width="820">
+</p>
 
-<img src="docs/assets/logo.svg" alt="Trove" width="88" />
-
-# Trove
-
-**Files Claude wrote, kept.**
-
-A Chrome extension that turns the files Claude generates in a conversation into
-a local library you own — browse them, read them, edit them, and pull them
-again when the conversation moves on.
-
-[Site](https://ursacode.github.io/trove/) · [Install](#install) · [How it works](#how-it-works) · [Privacy](#privacy) · [Contributing](CONTRIBUTING.md)
-
-[**Add to Chrome**](https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc)
-
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/mikpichonjdjbnhjafkjiofacepfpffc?label=chrome%20web%20store&color=5FD3BC)](https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc)
-[![Users](https://img.shields.io/chrome-web-store/users/mikpichonjdjbnhjafkjiofacepfpffc?color=7C8492)](https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc)
-[![Licence](https://img.shields.io/badge/licence-MIT-7C8492)](LICENSE)
-
-</div>
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc"><b>Add to Chrome &rarr;</b></a> &nbsp;·&nbsp;
+  <a href="https://ursacode.github.io/trove/">Site</a> &nbsp;·&nbsp;
+  <a href="https://ursacode.com">UrsaCode</a> &nbsp;·&nbsp;
+  <a href="https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc"><img src="https://img.shields.io/chrome-web-store/v/mikpichonjdjbnhjafkjiofacepfpffc?label=chrome%20web%20store&color=5FD3BC" alt="Chrome Web Store"></a>
+  <a href="https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc"><img src="https://img.shields.io/chrome-web-store/users/mikpichonjdjbnhjafkjiofacepfpffc?color=7C8492" alt="Users"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-green" alt="MIT licence"></a>
+</p>
 
 ---
+
+**Files Claude wrote, kept.** A Chrome extension that turns the files Claude
+generates in a conversation into a local library you own — browse them, read
+them, edit them, and pull them again when the conversation moves on. Built and
+maintained by [UrsaCode](https://ursacode.com).
 
 ## The problem
 
