@@ -18,11 +18,13 @@ const privacy = readFileSync('docs/privacy.html', 'utf8')
 const css = readFileSync('docs/styles/site.css', 'utf8')
 
 const checks = [
-  ['review badge shown', html.includes('class="pending">In review')],
-  ['badge has styling', /\.pending\s*\{/.test(css)],
-  ['store item linked', html.includes(`chromewebstore.google.com/detail/${ITEM_ID}`)],
+  ['live badge shown', html.includes('class="live">Live')],
+  ['badge has styling', /\.live\s*\{/.test(css)],
+  ['store item linked', html.includes(ITEM_ID)],
+  ['hero installs rather than scrolling to a build', html.includes('>Add to Chrome<')],
   ['no stale "not on the store" claim', !html.includes('not on the Chrome Web Store')],
-  ['install section says review', html.includes('waiting on review')],
+  // The listing is live, so any of these would now be untrue.
+  ['no stale review claim', !/waiting on review|awaiting review|In review/.test(html)],
   ['privacy page reachable from site', privacy.includes('Trove')],
   ['privacy states no transmission', /makes no network requests|Nothing/i.test(privacy)],
 ]

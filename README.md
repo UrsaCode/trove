@@ -12,7 +12,11 @@ again when the conversation moves on.
 
 [Site](https://ursacode.github.io/trove/) · [Install](#install) · [How it works](#how-it-works) · [Privacy](#privacy) · [Contributing](CONTRIBUTING.md)
 
-**Submitted to the Chrome Web Store — awaiting review.**
+[**Add to Chrome**](https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc)
+
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/mikpichonjdjbnhjafkjiofacepfpffc?label=chrome%20web%20store&color=5FD3BC)](https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc)
+[![Users](https://img.shields.io/chrome-web-store/users/mikpichonjdjbnhjafkjiofacepfpffc?color=7C8492)](https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc)
+[![Licence](https://img.shields.io/badge/licence-MIT-7C8492)](LICENSE)
 
 </div>
 
@@ -44,16 +48,11 @@ the link back.
 
 ### From the Chrome Web Store
 
-Trove has been submitted and is **waiting on review**. The listing link will not
-resolve until it is approved:
-
-    https://chromewebstore.google.com/detail/mikpichonjdjbnhjafkjiofacepfpffc
-
-Item ID `mikpichonjdjbnhjafkjiofacepfpffc`.
+**[Add to Chrome](https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc)** — this is the way to install it.
 
 ### From source
 
-Until then — and for development either way — it installs unpacked:
+For development, or to run an unreleased change:
 
 ```bash
 git clone https://github.com/UrsaCode/trove.git

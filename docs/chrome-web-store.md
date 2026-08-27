@@ -2,32 +2,36 @@
 
 ## Status
 
-**Version 1.0.0 submitted, awaiting review.**
+**Version 1.0.0 is published and live.**
 
 | | |
 |---|---|
 | Item ID | `mikpichonjdjbnhjafkjiofacepfpffc` |
-| Listing | https://chromewebstore.google.com/detail/mikpichonjdjbnhjafkjiofacepfpffc |
+| Listing | https://chromewebstore.google.com/detail/trove/mikpichonjdjbnhjafkjiofacepfpffc |
 | Dashboard | https://chrome.google.com/webstore/devconsole |
 | Release | https://github.com/UrsaCode/trove/releases/tag/v1.0.0 |
 | Uploaded archive | `trove-1.0.0.zip`, sha256 `f01d8756…c9d113` |
 
-The listing URL returns nothing until the item is approved. The item ID is
-permanent: every future version has to be uploaded to *this* item, from the same
-developer account, or it becomes a second extension that existing users never
-receive.
+The item ID is permanent: every future version has to be uploaded to *this*
+item, from the same developer account, or it becomes a second extension that
+existing users never receive.
 
-### When it is approved
+### Shipping an update
 
-- Swap the "awaiting review" lines in `README.md` and `docs/index.html` for the
-  live link, then re-run `node tools/check-site.mjs`.
-- Add the listing to the repository's About panel on GitHub.
-- Edit the v1.0.0 release notes to point at the listing instead of the archive.
+1. Make the change, and raise `version` in `src/manifest.json`. It must be
+   **numerically higher** than what the store holds — 1.0.1 and 1.1.0 both work.
+2. `npm test && npm run package`.
+3. Upload the new zip to the **same item** in the dashboard, and submit.
+4. Tag and release: `git tag vX.Y.Z && git push origin vX.Y.Z`, then attach the
+   same archive so the release and the store carry identical bytes.
 
-The v1.0.0 tag and release already exist, and the archive attached to it is
-byte-identical to the one uploaded to the store — same build, same checksum. A
-later version means a new tag, a new release, and a **higher** manifest version
-uploaded to the same item.
+An update goes through review again. Users on the previous version keep working
+throughout and are migrated automatically once it is approved — there is no
+window where the extension is unavailable to people who already have it.
+
+Anything that widens permissions triggers a heavier review and, for host
+permissions, a warning users must accept. Worth knowing before adding one
+casually.
 
 ### If it is rejected
 
